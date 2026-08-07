@@ -1,4 +1,4 @@
-﻿const { app, BrowserWindow, ipcMain, dialog, Menu, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Menu, shell } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
@@ -30,11 +30,11 @@ let updateState = {
   error: null
 };
 
-// âœ… Hot reload watcher
+// ✅ Hot reload watcher
 let folderWatcher = null;
 let watchedFolder = null;
 
-// âœ… System metrics: track previous CPU values for delta calculation
+// ✅ System metrics: track previous CPU values for delta calculation
 let prevCpuInfo = os.cpus().map(cpu => ({ ...cpu.times }));
 let prevNetStats = { rx: 0, tx: 0, time: Date.now() };
 
@@ -250,7 +250,7 @@ async function initializeServices() {
     streamManager.on('stream:started',      (d) => send('stream:started', d));
     streamManager.on('stream:stats',        (d) => send('stream:stats', d));
     streamManager.on('stream:stopped',      (d) => {
-      // âœ… Save history on stop
+      // ✅ Save history on stop
       if (d && d.streamId) {
         saveStreamHistory(d.streamId, d);
       }
@@ -265,9 +265,9 @@ async function initializeServices() {
     streamManager.on('stream:countdown',    (d) => send('stream:countdown', d));
     streamManager.on('stream:health-warning',(d) => send('stream:health-warning', d));
     streamManager.on('stream:restarting',   (d) => send('stream:restarting', d));
-    // âœ… Preview thumbnail
+    // ✅ Preview thumbnail
     streamManager.on('stream:thumbnail',    (d) => send('stream:thumbnail', d));
-    // âœ… Next video in playlist
+    // ✅ Next video in playlist
     streamManager.on('stream:next-video',   (d) => send('stream:next-video', d));
     autoLiveService.on('autoLive:status',    (d) => send('autoLive:status', d));
     autoLiveService.on('autoLive:started',   (d) => send('autoLive:started', d));
@@ -280,7 +280,7 @@ async function initializeServices() {
   }
 }
 
-// âœ… Save stream history to database
+// ✅ Save stream history to database
 async function saveStreamHistory(streamId, data) {
   try {
     if (!db) return;
@@ -306,14 +306,14 @@ async function saveStreamHistory(streamId, data) {
   }
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────
 // IPC: Playlist
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────
 ipcMain.handle('playlist:select', async () => {
   try {
     const result = await dialog.showOpenDialog(mainWindow, {
       properties: ['openDirectory'],
-      title: 'Chá»n thÆ° má»¥c video'
+      title: 'Chọn thư mục video'
     });
     if (!result.canceled) return { success: true, path: result.filePaths[0] };
     return { success: false };
@@ -346,7 +346,7 @@ ipcMain.handle('playlist:getVideos', async (event, folderPath) => {
   }
 });
 
-// âœ… Hot reload: watch folder for new/removed video files
+// ✅ Hot reload: watch folder for new/removed video files
 ipcMain.handle('playlist:watchFolder', async (event, folderPath) => {
   try {
     // Stop previous watcher
@@ -363,7 +363,7 @@ ipcMain.handle('playlist:watchFolder', async (event, folderPath) => {
       const ext = path.extname(filename).toLowerCase();
       if (!videoExtensions.includes(ext)) return;
 
-      // Debounce â€” wait 500ms before scanning
+      // Debounce — wait 500ms before scanning
       clearTimeout(folderWatcher._debounce);
       folderWatcher._debounce = setTimeout(async () => {
         try {
@@ -386,7 +386,7 @@ ipcMain.handle('playlist:watchFolder', async (event, folderPath) => {
       }, 500);
     });
 
-    console.log('âœ… Watching folder for changes:', folderPath);
+    console.log('✅ Watching folder for changes:', folderPath);
     return { success: true };
   } catch (error) {
     return { success: false, error: error.message };
@@ -402,14 +402,14 @@ ipcMain.handle('playlist:unwatchFolder', () => {
   return { success: true };
 });
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────
 // IPC: Video
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────
 ipcMain.handle('video:selectFile', async () => {
   try {
     const result = await dialog.showOpenDialog(mainWindow, {
       properties: ['openFile'],
-      title: 'Chá»n file video',
+      title: 'Chọn file video',
       filters: [{ name: 'Video Files', extensions: ['mp4', 'mkv', 'avi', 'mov'] }]
     });
     if (!result.canceled) return { success: true, path: result.filePaths[0] };
@@ -419,13 +419,13 @@ ipcMain.handle('video:selectFile', async () => {
   }
 });
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────
 // IPC: Stream
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────
 ipcMain.handle('stream:start', async (event, config) => {
   try {
     if (!config.rtmpUrl || !config.streamKey) {
-      return { success: false, error: 'Thiáº¿u RTMP URL hoáº·c Stream Key' };
+      return { success: false, error: 'Thiếu RTMP URL hoặc Stream Key' };
     }
     if (!streamManager) {
       await initializeServices();
@@ -509,9 +509,9 @@ ipcMain.handle('stream:getSavedConfigs', async () => {
   }
 });
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────
 // IPC: Schedule
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────
 ipcMain.handle('schedule:getAll', async () => {
   try {
     if (!db) return { success: true, schedules: [] };
@@ -603,9 +603,9 @@ ipcMain.handle('autoLive:previewGoogle', async (event, url) => {
   }
 });
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────
 // IPC: Settings
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────
 
 
 ipcMain.handle('autoLive:openChromeLogin', async () => {
@@ -702,9 +702,9 @@ ipcMain.handle('settings:getAll', async () => {
   return {};
 });
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// âœ… IPC: System metrics (on-demand)
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────
+// ✅ IPC: System metrics (on-demand)
+// ──────────────────────────────────────────────
 ipcMain.handle('system:getMetrics', () => {
   return {
     cpu: getCpuPercent(),
@@ -713,9 +713,9 @@ ipcMain.handle('system:getMetrics', () => {
   };
 });
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// âœ… IPC: Stream History
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────
+// ✅ IPC: Stream History
+// ──────────────────────────────────────────────
 ipcMain.handle('history:getAll', async (event, limit = 100) => {
   try {
     if (!db) return { success: true, history: [] };
@@ -753,7 +753,7 @@ ipcMain.handle('history:clear', async () => {
 ipcMain.handle('history:exportJson', async () => {
   try {
     const result = await dialog.showSaveDialog(mainWindow, {
-      title: 'Xuáº¥t lá»‹ch sá»­ stream',
+      title: 'Xuất lịch sử stream',
       defaultPath: `stream-history-${new Date().toISOString().slice(0,10)}.json`,
       filters: [{ name: 'JSON', extensions: ['json'] }]
     });
@@ -766,13 +766,13 @@ ipcMain.handle('history:exportJson', async () => {
   }
 });
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// âœ… IPC: Config Export / Import
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────
+// ✅ IPC: Config Export / Import
+// ──────────────────────────────────────────────
 ipcMain.handle('config:exportStreams', async () => {
   try {
     const result = await dialog.showSaveDialog(mainWindow, {
-      title: 'Xuáº¥t cáº¥u hÃ¬nh stream',
+      title: 'Xuất cấu hình stream',
       defaultPath: `vic-streams-config-${new Date().toISOString().slice(0,10)}.json`,
       filters: [{ name: 'JSON', extensions: ['json'] }]
     });
@@ -799,7 +799,7 @@ ipcMain.handle('config:exportStreams', async () => {
 ipcMain.handle('config:importStreams', async () => {
   try {
     const result = await dialog.showOpenDialog(mainWindow, {
-      title: 'Nháº­p cáº¥u hÃ¬nh stream',
+      title: 'Nhập cấu hình stream',
       filters: [{ name: 'JSON', extensions: ['json'] }],
       properties: ['openFile']
     });
@@ -807,7 +807,7 @@ ipcMain.handle('config:importStreams', async () => {
     const content = fs.readFileSync(result.filePaths[0], 'utf8');
     const parsed = JSON.parse(content);
     if (!parsed.streams || !Array.isArray(parsed.streams)) {
-      return { success: false, error: 'File khÃ´ng há»£p lá»‡' };
+      return { success: false, error: 'File không hợp lệ' };
     }
     return { success: true, streams: parsed.streams };
   } catch (err) {
@@ -815,9 +815,9 @@ ipcMain.handle('config:importStreams', async () => {
   }
 });
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────
 // Cleanup
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────
 app.on('before-quit', async () => {
   if (folderWatcher) { folderWatcher.close(); folderWatcher = null; }
   if (scheduleService) {

@@ -1,4 +1,4 @@
-﻿// Schedule Manager for renderer process
+// Schedule Manager for renderer process
 class ScheduleManager {
     constructor() {
         this.schedules = [];
@@ -27,7 +27,7 @@ class ScheduleManager {
         try {
             // Validate schedule configuration
             if (!this.validateSchedule(config)) {
-                throw new Error('Cáº¥u hÃ¬nh lá»‹ch phÃ¡t khÃ´ng há»£p lá»‡');
+                throw new Error('Cấu hình lịch phát không hợp lệ');
             }
 
             const result = await window.api.schedule.create(config);
@@ -45,7 +45,7 @@ class ScheduleManager {
 
     async deleteSchedule(scheduleId) {
         try {
-            if (!confirm('Báº¡n cÃ³ cháº¯c cháº¯n muá»‘n xÃ³a lá»‹ch phÃ¡t nÃ y?')) {
+            if (!confirm('Bạn có chắc chắn muốn xóa lịch phát này?')) {
                 return false;
             }
 
@@ -103,8 +103,8 @@ class ScheduleManager {
                     <svg viewBox="0 0 24 24">
                         <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
                     </svg>
-                    <p>ChÆ°a cÃ³ lá»‹ch phÃ¡t nÃ o</p>
-                    <button class="btn btn-primary" onclick="scheduleManager.showAddScheduleModal()">Táº¡o lá»‹ch phÃ¡t</button>
+                    <p>Chưa có lịch phát nào</p>
+                    <button class="btn btn-primary" onclick="scheduleManager.showAddScheduleModal()">Tạo lịch phát</button>
                 </div>
             `;
         } else {
@@ -156,29 +156,29 @@ class ScheduleManager {
                             <svg viewBox="0 0 24 24">
                                 <path d="M15 1H9v2h6V1zm-4 13h2V8h-2v6zm8.03-6.61l1.42-1.42c-.43-.51-.9-.99-1.41-1.41l-1.42 1.42C16.07 4.74 14.12 4 12 4c-4.97 0-9 4.03-9 9s4.02 9 9 9 9-4.03 9-9c0-2.12-.74-4.07-1.97-5.61zM12 20c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/>
                             </svg>
-                            <span>${schedule.duration} phÃºt</span>
+                            <span>${schedule.duration} phút</span>
                         </div>
                     ` : ''}
                 </div>
                 <span class="schedule-status ${isActive ? 'active' : 'inactive'}">
-                    ${isActive ? 'Äang hoáº¡t Ä‘á»™ng' : 'KhÃ´ng hoáº¡t Ä‘á»™ng'}
+                    ${isActive ? 'Đang hoạt động' : 'Không hoạt động'}
                 </span>
-                ${nextRun ? `<small>Láº§n cháº¡y tiáº¿p theo: ${nextRun}</small>` : ''}
+                ${nextRun ? `<small>Lần chạy tiếp theo: ${nextRun}</small>` : ''}
             </div>
             <div class="schedule-actions">
-                <button class="btn btn-secondary" onclick="scheduleManager.editSchedule('${schedule.id}')" title="Chá»‰nh sá»­a">
+                <button class="btn btn-secondary" onclick="scheduleManager.editSchedule('${schedule.id}')" title="Chỉnh sửa">
                     <svg class="icon" viewBox="0 0 24 24">
                         <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
                     </svg>
                 </button>
-                <button class="btn btn-secondary" onclick="scheduleManager.toggleSchedule('${schedule.id}')" title="${isActive ? 'Táº¯t' : 'Báº­t'}">
+                <button class="btn btn-secondary" onclick="scheduleManager.toggleSchedule('${schedule.id}')" title="${isActive ? 'Tắt' : 'Bật'}">
                     <svg class="icon" viewBox="0 0 24 24">
                         ${isActive ? 
                             '<path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>' :
                             '<path d="M8 5v14l11-7z"/>'}
                     </svg>
                 </button>
-                <button class="btn btn-danger" onclick="scheduleManager.deleteSchedule('${schedule.id}')" title="XÃ³a">
+                <button class="btn btn-danger" onclick="scheduleManager.deleteSchedule('${schedule.id}')" title="Xóa">
                     <svg class="icon" viewBox="0 0 24 24">
                         <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
                     </svg>
@@ -195,23 +195,23 @@ class ScheduleManager {
 
     getRepeatText(schedule) {
         if (!schedule.repeat) {
-            return 'Má»™t láº§n';
+            return 'Một lần';
         }
 
         switch (schedule.repeatType) {
             case 'daily':
-                return 'HÃ ng ngÃ y';
+                return 'Hàng ngày';
             case 'weekly':
                 if (schedule.repeatDays && schedule.repeatDays.length > 0) {
                     const days = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
                     const selectedDays = schedule.repeatDays.map(d => days[d]).join(', ');
-                    return `HÃ ng tuáº§n (${selectedDays})`;
+                    return `Hàng tuần (${selectedDays})`;
                 }
-                return 'HÃ ng tuáº§n';
+                return 'Hàng tuần';
             case 'custom':
-                return `Má»—i ${schedule.repeatInterval} ${schedule.repeatUnit}`;
+                return `Mỗi ${schedule.repeatInterval} ${schedule.repeatUnit}`;
             default:
-                return 'KhÃ´ng xÃ¡c Ä‘á»‹nh';
+                return 'Không xác định';
         }
     }
 
@@ -268,15 +268,15 @@ class ScheduleManager {
 
         let dateStr = '';
         if (date.toDateString() === now.toDateString()) {
-            dateStr = 'HÃ´m nay';
+            dateStr = 'Hôm nay';
         } else if (date.toDateString() === tomorrow.toDateString()) {
-            dateStr = 'NgÃ y mai';
+            dateStr = 'Ngày mai';
         } else {
             dateStr = date.toLocaleDateString('vi-VN');
         }
 
         const timeStr = date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-        return `${dateStr} lÃºc ${timeStr}`;
+        return `${dateStr} lúc ${timeStr}`;
     }
 
     async toggleSchedule(scheduleId) {
@@ -292,12 +292,12 @@ class ScheduleManager {
                 await this.loadSchedules();
 
                 if (window.app) {
-                    const status = schedule.active ? 'Ä‘Ã£ báº­t' : 'Ä‘Ã£ táº¯t';
-                    window.app.showToast(`Lá»‹ch phÃ¡t "${schedule.name}" ${status}`, 'info');
+                    const status = schedule.active ? 'đã bật' : 'đã tắt';
+                    window.app.showToast(`Lịch phát "${schedule.name}" ${status}`, 'info');
                 }
             } catch (error) {
                 if (window.app) {
-                    window.app.showToast(error.message || 'KhÃ´ng cáº­p nháº­t Ä‘Æ°á»£c lá»‹ch phÃ¡t', 'error');
+                    window.app.showToast(error.message || 'Không cập nhật được lịch phát', 'error');
                 }
             }
         }

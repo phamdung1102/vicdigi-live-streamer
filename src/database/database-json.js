@@ -45,11 +45,11 @@ class DatabaseService {
                 if (await this.migrateSensitiveData()) {
                     await this.save();
                 }
-                console.log('✅ Database loaded from file');
+                console.log('? Database loaded from file');
             } catch (err) {
                 // File doesn't exist, create it
                 await this.save();
-                console.log('✅ New database created');
+                console.log('? New database created');
             }
 
         } catch (error) {
@@ -307,7 +307,7 @@ class DatabaseService {
 
     // Create tables (no-op for JSON database)
     async createTables() {
-        console.log('✅ Database structure ready (JSON mode)');
+        console.log('? Database structure ready (JSON mode)');
         return Promise.resolve();
     }
 }

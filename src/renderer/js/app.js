@@ -1,4 +1,4 @@
-﻿// Main App Controller
+// Main App Controller
 class App {
     constructor() {
         this.currentPage = 'dashboard';
@@ -9,7 +9,7 @@ class App {
     }
 
     async init() {
-        console.log('ðŸš€ VICdigi Live Streamer initializing...');
+        console.log('🚀 VICdigi Live Streamer initializing...');
         
         // Initialize navigation
         this.initNavigation();
@@ -27,7 +27,7 @@ class App {
         // Listen to stream events
         this.listenToStreamEvents();
         
-        console.log('âœ… App initialized successfully');
+        console.log('✅ App initialized successfully');
     }
 
     async loadAppVersion() {
@@ -268,7 +268,7 @@ class App {
             installUpdateBtn.addEventListener('click', () => this.installUpdate());
         }
 
-        // âœ… Overlay toggle â€” show/hide overlay options when checkbox changes
+        // ✅ Overlay toggle — show/hide overlay options when checkbox changes
         document.addEventListener('change', (e) => {
             if (e.target && e.target.name === 'overlayEnabled') {
                 const opts = document.getElementById('overlay-options');
@@ -276,16 +276,16 @@ class App {
             }
         });
 
-        // âœ… Hot reload toggle
+        // ✅ Hot reload toggle
         const hotReloadCheckbox = document.getElementById('hot-reload');
         if (hotReloadCheckbox) {
             hotReloadCheckbox.addEventListener('change', async (e) => {
                 if (e.target.checked && this.currentPlaylistFolder) {
                     await window.api.playlist.watchFolder(this.currentPlaylistFolder);
-                    this.showToast('ðŸ”„ Hot reload báº­t â€” tá»± nháº­n video má»›i', 'success');
+                    this.showToast('🔄 Hot reload bật — tự nhận video mới', 'success');
                 } else {
                     await window.api.playlist.unwatchFolder();
-                    this.showToast('Hot reload Ä‘Ã£ táº¯t', 'info');
+                    this.showToast('Hot reload đã tắt', 'info');
                 }
             });
         }
@@ -315,7 +315,7 @@ class App {
     }
 
     startMonitoring() {
-        // âœ… Real system metrics pushed from main process every 2s
+        // ✅ Real system metrics pushed from main process every 2s
         if (window.api.system && window.api.system.onMetrics) {
             window.api.system.onMetrics((metrics) => {
                 this.updateSystemInfoReal(metrics);
@@ -349,7 +349,7 @@ class App {
             this.activeStreams.set(data.streamId, streamInfo);
             this.updateDashboard();
             this.loadStreams();
-            this.showToast(`Stream "${streamInfo.name}" Ä‘Ã£ báº¯t Ä‘áº§u`, 'success');
+            this.showToast(`Stream "${streamInfo.name}" đã bắt đầu`, 'success');
         });
 
         // Stream stopped
@@ -357,13 +357,13 @@ class App {
             console.log('Stream stopped:', data);
             this.activeStreams.delete(data.streamId);
             this.updateDashboard();
-            this.showToast('Stream Ä‘Ã£ dá»«ng', 'info');
+            this.showToast('Stream đã dừng', 'info');
         });
 
         // Stream error
         window.api.stream.onError((data) => {
             console.error('Stream error:', data);
-            this.showToast(`Lá»—i stream: ${data.error}`, 'error');
+            this.showToast(`Lỗi stream: ${data.error}`, 'error');
         });
 
         // Stream stats update
@@ -397,33 +397,33 @@ class App {
         window.api.stream.onHealthWarning && window.api.stream.onHealthWarning((data) => {
             console.warn(`Stream health warning: ${data.streamId} - ${data.health}%`);
             if (data.health < 30) {
-                this.showToast(`âš ï¸ Stream health is low: ${data.health}%`, 'warning');
+                this.showToast(`⚠️ Stream health is low: ${data.health}%`, 'warning');
             }
         });
 
         // Stream restarting
         window.api.stream.onRestarting && window.api.stream.onRestarting((data) => {
-            this.showToast(`ðŸ”„ Restarting stream (attempt ${data.attempt})...`, 'info');
+            this.showToast(`🔄 Restarting stream (attempt ${data.attempt})...`, 'info');
         });
 
-        // âœ… Next video in playlist
+        // ✅ Next video in playlist
         if (window.api.stream.onNextVideo) {
             window.api.stream.onNextVideo((data) => {
                 const { streamId, videoName, playlistMode, playlistIndex } = data;
-                this.showToast(`â–¶ï¸ [${playlistMode}] â†’ ${videoName}`, 'info');
+                this.showToast(`▶️ [${playlistMode}] → ${videoName}`, 'info');
                 // Update card title if visible
                 const card = document.querySelector(`[data-stream-id="${streamId}"]`);
                 if (card) {
                     const nowPlaying = card.querySelector('.now-playing');
                     if (nowPlaying) {
-                        nowPlaying.textContent = `â–¶ï¸ ${videoName}`;
+                        nowPlaying.textContent = `▶️ ${videoName}`;
                     } else {
                         const info = card.querySelector('.stream-info');
                         if (info) {
                             const div = document.createElement('div');
                             div.className = 'now-playing';
                             div.style.cssText = 'font-size:12px;color:var(--accent-primary);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
-                            div.textContent = `â–¶ï¸ ${videoName}`;
+                            div.textContent = `▶️ ${videoName}`;
                             info.appendChild(div);
                         }
                     }
@@ -431,7 +431,7 @@ class App {
             });
         }
 
-        // âœ… Stream preview thumbnail
+        // ✅ Stream preview thumbnail
         if (window.api.stream.onThumbnail) {
             window.api.stream.onThumbnail((data) => {
                 const { streamId, thumbnail } = data;
@@ -451,7 +451,7 @@ class App {
             });
         }
 
-        // âœ… Hot reload â€” folder changed event
+        // ✅ Hot reload — folder changed event
         if (window.api.playlist && window.api.playlist.onFolderChanged) {
             window.api.playlist.onFolderChanged((data) => {
                 const prevCount = this.playlistVideos.length;
@@ -459,11 +459,11 @@ class App {
                 this.updatePlaylistUI();
                 const diff = this.playlistVideos.length - prevCount;
                 if (diff > 0) {
-                    this.showToast(`ðŸ”„ Playlist tá»± Ä‘á»™ng cáº­p nháº­t: +${diff} video má»›i`, 'success');
+                    this.showToast(`🔄 Playlist tự động cập nhật: +${diff} video mới`, 'success');
                 } else if (diff < 0) {
-                    this.showToast(`ðŸ”„ Playlist cáº­p nháº­t: ${Math.abs(diff)} video Ä‘Ã£ xÃ³a`, 'info');
+                    this.showToast(`🔄 Playlist cập nhật: ${Math.abs(diff)} video đã xóa`, 'info');
                 } else {
-                    this.showToast('ðŸ”„ Playlist Ä‘Ã£ cáº­p nháº­t', 'info');
+                    this.showToast('🔄 Playlist đã cập nhật', 'info');
                 }
             });
         }
@@ -474,14 +474,14 @@ class App {
                 this.setAutoLiveStatus(`Auto Live ${data.status}${title}`);
             });
             window.api.autoLive.onStarted((data) => {
-                this.showToast(`Auto Live Ä‘Ã£ start: ${data?.row?.title || data.streamId}`, 'success');
+                this.showToast(`Auto Live đã start: ${data?.row?.title || data.streamId}`, 'success');
             });
             window.api.autoLive.onError((data) => {
-                this.showToast(`Auto Live lá»—i: ${data.error}`, 'error');
-                this.setAutoLiveStatus(`Auto Live lá»—i: ${data.error}`);
+                this.showToast(`Auto Live lỗi: ${data.error}`, 'error');
+                this.setAutoLiveStatus(`Auto Live lỗi: ${data.error}`);
             });
             window.api.autoLive.onReloaded((data) => {
-                this.setAutoLiveStatus(`Auto Live Ä‘Ã£ Ä‘á»c ${data.total} dÃ²ng, háº¹n ${data.scheduled} lá»‹ch.`);
+                this.setAutoLiveStatus(`Auto Live đã đọc ${data.total} dòng, hẹn ${data.scheduled} lịch.`);
             });
         }
 
@@ -490,18 +490,18 @@ class App {
                 const status = data.status;
                 const state = data.state || {};
                 if (status === 'available') {
-                    this.showToast(`CÃ³ báº£n má»›i ${state.version || ''}`, 'info');
-                    this.setUpdaterStatus(`CÃ³ báº£n má»›i ${state.version || ''}. Báº¥m táº£i báº£n má»›i.`);
+                    this.showToast(`Có bản mới ${state.version || ''}`, 'info');
+                    this.setUpdaterStatus(`Có bản mới ${state.version || ''}. Bấm tải bản mới.`);
                 } else if (status === 'download-progress') {
                     const pct = Math.round(data.progress?.percent || 0);
-                    this.setUpdaterStatus(`Äang táº£i update: ${pct}%`);
+                    this.setUpdaterStatus(`Đang tải update: ${pct}%`);
                 } else if (status === 'downloaded') {
-                    this.showToast('ÄÃ£ táº£i xong báº£n cáº­p nháº­t', 'success');
-                    this.setUpdaterStatus('ÄÃ£ táº£i xong. Báº¥m CÃ i vÃ  khá»Ÿi Ä‘á»™ng láº¡i.');
+                    this.showToast('Đã tải xong bản cập nhật', 'success');
+                    this.setUpdaterStatus('Đã tải xong. Bấm Cài và khởi động lại.');
                 } else if (status === 'not-available') {
-                    this.setUpdaterStatus('Äang dÃ¹ng phiÃªn báº£n má»›i nháº¥t.');
+                    this.setUpdaterStatus('Đang dùng phiên bản mới nhất.');
                 } else if (status === 'error') {
-                    this.setUpdaterStatus(`Lá»—i update: ${state.error || data.error}`);
+                    this.setUpdaterStatus(`Lỗi update: ${state.error || data.error}`);
                 } else {
                     this.setUpdaterStatus(`Update: ${status}`);
                 }
@@ -524,8 +524,8 @@ class App {
                         <svg viewBox="0 0 24 24">
                             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
                         </svg>
-                        <p>KhÃ´ng cÃ³ luá»“ng nÃ o Ä‘ang phÃ¡t</p>
-                        <button class="btn btn-primary" onclick="app.showPage('streams')">Báº¯t Ä‘áº§u stream</button>
+                        <p>Không có luồng nào đang phát</p>
+                        <button class="btn btn-primary" onclick="app.showPage('streams')">Bắt đầu stream</button>
                     </div>
                 `;
             } else {
@@ -552,9 +552,9 @@ class App {
         if (config.stopAfterMinutes) {
             const hours = Math.floor(config.stopAfterMinutes / 60);
             const minutes = config.stopAfterMinutes % 60;
-            timerInfo = `â±ï¸ Tá»± táº¯t sau: ${hours > 0 ? hours + 'h ' : ''}${minutes}m`;
+            timerInfo = `⏱️ Tự tắt sau: ${hours > 0 ? hours + 'h ' : ''}${minutes}m`;
         } else if (config.stopAtTime) {
-            timerInfo = `â° Tá»± táº¯t lÃºc: ${config.stopAtTime}`;
+            timerInfo = `⏰ Tự tắt lúc: ${config.stopAtTime}`;
         }
         
         card.innerHTML = `
@@ -563,7 +563,7 @@ class App {
                     <svg viewBox="0 0 24 24">
                         <path d="M21 3H3c-1.11 0-2 .89-2 2v12c0 1.1.89 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.11-.9-2-2-2zm0 14H3V5h18v12z"/>
                     </svg>
-                    <p>Preview khÃ´ng kháº£ dá»¥ng</p>
+                    <p>Preview không khả dụng</p>
                 </div>
                 <span class="stream-badge live">LIVE</span>
             </div>
@@ -596,13 +596,13 @@ class App {
                         <svg class="icon" viewBox="0 0 24 24">
                             <path d="M6 6h12v12H6z"/>
                         </svg>
-                        Dá»«ng
+                        Dừng
                     </button>
                     <button class="btn btn-secondary" onclick="window.app.showStreamDetails('${stream.id || stream.streamId}')">
                         <svg class="icon" viewBox="0 0 24 24">
                             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
                         </svg>
-                        Chi tiáº¿t
+                        Chi tiết
                     </button>
                 </div>
             </div>
@@ -667,13 +667,13 @@ class App {
             
             if (remaining.totalSeconds <= 0) {
                 if (timerDiv) {
-                    timerDiv.textContent = 'â±ï¸ Äang dá»«ng stream...';
+                    timerDiv.textContent = '⏱️ Đang dừng stream...';
                     timerDiv.style.color = '#f44336';
                 }
                 return;
             }
             
-            const countdown = `â±ï¸ CÃ²n láº¡i: ${remaining.formatted}`;
+            const countdown = `⏱️ Còn lại: ${remaining.formatted}`;
             
             if (timerDiv) {
                 timerDiv.textContent = countdown;
@@ -700,10 +700,10 @@ class App {
     }
 
     async stopStream(streamId) {
-        if (confirm('Báº¡n cÃ³ cháº¯c cháº¯n muá»‘n dá»«ng stream nÃ y?')) {
+        if (confirm('Bạn có chắc chắn muốn dừng stream này?')) {
             const result = await window.api.stream.stop(streamId);
             if (!result.success) {
-                this.showToast(`Lá»—i: ${result.error}`, 'error');
+                this.showToast(`Lỗi: ${result.error}`, 'error');
             }
         }
     }
@@ -730,7 +730,7 @@ class App {
         }
     }
 
-    // âœ… Real system metrics â€” called via IPC event from main process
+    // ✅ Real system metrics — called via IPC event from main process
     updateSystemInfoReal(metrics) {
         if (!metrics) return;
         const cpuEl  = document.getElementById('cpu-usage');
@@ -738,10 +738,10 @@ class App {
         const upEl   = document.getElementById('upload-speed');
         if (cpuEl) cpuEl.textContent = `${metrics.cpu}%`;
         if (ramEl) ramEl.textContent = `${metrics.memory.used} MB`;
-        // Upload speed not available from os module â€” show active stream count instead
+        // Upload speed not available from os module — show active stream count instead
         if (upEl) {
             const count = this.activeStreams.size;
-            upEl.textContent = count > 0 ? `${count} luá»“ng` : 'â€”';
+            upEl.textContent = count > 0 ? `${count} luồng` : '—';
         }
     }
 
@@ -795,7 +795,7 @@ class App {
                 break;
             case 'tiktok':
                 rtmpInput.value = '';
-                rtmpInput.placeholder = 'URL tá»« TikTok Studio (VD: rtmp://push.tiktok.com/live)';
+                rtmpInput.placeholder = 'URL từ TikTok Studio (VD: rtmp://push.tiktok.com/live)';
                 break;
             default:
                 rtmpInput.value = '';
@@ -809,7 +809,7 @@ class App {
         
         const playlists = playlistManager.getAllPlaylists();
         
-        playlistSelect.innerHTML = '<option value="">-- Chá»n playlist --</option>';
+        playlistSelect.innerHTML = '<option value="">-- Chọn playlist --</option>';
         
         playlists.forEach(playlist => {
             const option = document.createElement('option');
@@ -835,14 +835,14 @@ class App {
         if (sourceType === 'file') {
             videoSource = formData.get('videoPath');
             if (!videoSource) {
-                this.showToast('Vui lÃ²ng chá»n file video', 'error');
+                this.showToast('Vui lòng chọn file video', 'error');
                 return;
             }
         } else if (sourceType === 'playlist') {
             // Get selected playlist
             const playlistId = formData.get('playlistId');
             if (!playlistId) {
-                this.showToast('Vui lÃ²ng chá»n playlist', 'error');
+                this.showToast('Vui lòng chọn playlist', 'error');
                 return;
             }
             videoSource = null; // Will be handled by playlist
@@ -859,7 +859,7 @@ class App {
             autoRestart: formData.get('autoRestart') === 'on',
             loopVideo:   formData.get('loopVideo')   === 'on',
             videoSource: videoSource,
-            // âœ… Overlay / watermark
+            // ✅ Overlay / watermark
             overlay: formData.get('overlayEnabled') === 'on' ? {
                 enabled: true,
                 text:     formData.get('overlayText')     || 'VICdigi Live',
@@ -871,7 +871,7 @@ class App {
 
         // Handle timer settings - IMPROVED with logging
         const timerType = formData.get('timerType');
-        console.log('ðŸ“ Timer settings from form:', {
+        console.log('📝 Timer settings from form:', {
             timerType,
             timerHours: formData.get('timerHours'),
             timerMinutes: formData.get('timerMinutes'),
@@ -883,20 +883,20 @@ class App {
             const minutes = parseInt(formData.get('timerMinutes') || 0);
             if (hours > 0 || minutes > 0) {
                 config.stopAfterMinutes = hours * 60 + minutes;
-                console.log(`â±ï¸ Timer duration set: ${hours}h ${minutes}m = ${config.stopAfterMinutes} minutes`);
+                console.log(`⏱️ Timer duration set: ${hours}h ${minutes}m = ${config.stopAfterMinutes} minutes`);
             } else {
-                console.log('âš ï¸ Timer duration selected but no time specified');
+                console.log('⚠️ Timer duration selected but no time specified');
             }
         } else if (timerType === 'specific') {
             const timerTime = formData.get('timerTime');
             if (timerTime) {
                 config.stopAtTime = timerTime;
-                console.log(`â° Timer specific time set: ${timerTime}`);
+                console.log(`⏰ Timer specific time set: ${timerTime}`);
             } else {
-                console.log('âš ï¸ Timer specific selected but no time specified');
+                console.log('⚠️ Timer specific selected but no time specified');
             }
         } else {
-            console.log('â„¹ï¸ No timer selected (timerType = none or not set)');
+            console.log('ℹ️ No timer selected (timerType = none or not set)');
         }
         
         // If using playlist, add playlist config
@@ -905,7 +905,7 @@ class App {
             const playlistConfig = playlistManager.getPlaylistForStream(playlistId);
             
             if (!playlistConfig) {
-                this.showToast('Playlist khÃ´ng há»£p lá»‡', 'error');
+                this.showToast('Playlist không hợp lệ', 'error');
                 return;
             }
             
@@ -913,7 +913,7 @@ class App {
         }
 
         // Log final config before sending
-        console.log('ðŸš€ Final stream config:', {
+        console.log('🚀 Final stream config:', {
             name: config.name,
             platform: config.platform,
             stopAfterMinutes: config.stopAfterMinutes,
@@ -923,7 +923,7 @@ class App {
 
         const result = await window.api.stream.start(config);
         if (result.success) {
-            console.log(`âœ… Stream started successfully with ID: ${result.streamId}`);
+            console.log(`✅ Stream started successfully with ID: ${result.streamId}`);
 
             // Reset form BEFORE closing modal
             form.reset();
@@ -941,20 +941,20 @@ class App {
             if (specificInput) specificInput.style.display = 'none';
 
             this.closeModals();
-            this.showToast('Stream Ä‘Ã£ Ä‘Æ°á»£c thÃªm thÃ nh cÃ´ng', 'success');
+            this.showToast('Stream đã được thêm thành công', 'success');
 
             // If timer is set, show notification
             if (config.stopAfterMinutes) {
                 const hours = Math.floor(config.stopAfterMinutes / 60);
                 const mins = config.stopAfterMinutes % 60;
                 const timeStr = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
-                this.showToast(`â±ï¸ Stream "${config.name}" sáº½ tá»± Ä‘á»™ng táº¯t sau ${timeStr}`, 'info');
+                this.showToast(`⏱️ Stream "${config.name}" sẽ tự động tắt sau ${timeStr}`, 'info');
             } else if (config.stopAtTime) {
-                this.showToast(`â° Stream "${config.name}" sáº½ tá»± Ä‘á»™ng táº¯t lÃºc ${config.stopAtTime}`, 'info');
+                this.showToast(`⏰ Stream "${config.name}" sẽ tự động tắt lúc ${config.stopAtTime}`, 'info');
             }
         } else {
-            console.error('âŒ Failed to start stream:', result.error);
-            this.showToast(`Lá»—i: ${result.error}`, 'error');
+            console.error('❌ Failed to start stream:', result.error);
+            this.showToast(`Lỗi: ${result.error}`, 'error');
         }
     }
 
@@ -967,11 +967,11 @@ class App {
             if (result.success) {
                 return result.path;
             } else if (result.error) {
-                this.showToast(`Lá»—i: ${result.error}`, 'error');
+                this.showToast(`Lỗi: ${result.error}`, 'error');
             }
         } catch (error) {
             console.error('Error selecting video:', error);
-            this.showToast('KhÃ´ng thá»ƒ chá»n file video', 'error');
+            this.showToast('Không thể chọn file video', 'error');
         }
         return null;
     }
@@ -988,23 +988,23 @@ class App {
                 if (videos.success) {
                     this.playlistVideos = videos.videos;
                     this.updatePlaylistUI();
-                    this.showToast(`ÄÃ£ táº£i ${videos.videos.length} video`, 'success');
+                    this.showToast(`Đã tải ${videos.videos.length} video`, 'success');
 
-                    // âœ… Start hot reload if checkbox is checked
+                    // ✅ Start hot reload if checkbox is checked
                     const hotReloadCheckbox = document.getElementById('hot-reload');
                     if (hotReloadCheckbox && hotReloadCheckbox.checked) {
                         await window.api.playlist.watchFolder(result.path);
-                        this.showToast('ðŸ”„ Hot reload Ä‘ang báº­t â€” tá»± nháº­n video má»›i', 'info');
+                        this.showToast('🔄 Hot reload đang bật — tự nhận video mới', 'info');
                     }
                 } else {
-                    this.showToast(`Lá»—i: ${videos.error}`, 'error');
+                    this.showToast(`Lỗi: ${videos.error}`, 'error');
                 }
             } else if (result.error) {
-                this.showToast(`Lá»—i: ${result.error}`, 'error');
+                this.showToast(`Lỗi: ${result.error}`, 'error');
             }
         } catch (error) {
             console.error('Error selecting folder:', error);
-            this.showToast('KhÃ´ng thá»ƒ chá»n thÆ° má»¥c', 'error');
+            this.showToast('Không thể chọn thư mục', 'error');
         }
     }
 
@@ -1017,7 +1017,7 @@ class App {
                         <svg viewBox="0 0 24 24">
                             <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9h-4v4h-2v-4H9V9h4V5h2v4h4v2z"/>
                         </svg>
-                        <p>ChÆ°a chá»n thÆ° má»¥c video</p>
+                        <p>Chưa chọn thư mục video</p>
                     </div>
                 `;
             } else {
@@ -1034,12 +1034,12 @@ class App {
                         <div class="video-info">
                             <h4>${video.name}</h4>
                             <div class="video-meta">
-                                <span>KÃ­ch thÆ°á»›c: ${this.formatFileSize(video.size)}</span>
-                                <span>Thá»i lÆ°á»£ng: ${video.duration || 'N/A'}</span>
+                                <span>Kích thước: ${this.formatFileSize(video.size)}</span>
+                                <span>Thời lượng: ${video.duration || 'N/A'}</span>
                             </div>
                         </div>
                         <div class="video-actions">
-                            <button title="XÃ³a khá»i playlist">
+                            <button title="Xóa khỏi playlist">
                                 <svg width="16" height="16" viewBox="0 0 24 24">
                                     <path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
                                 </svg>
@@ -1073,8 +1073,8 @@ class App {
                     <svg viewBox="0 0 24 24">
                         <path d="M21 3H3c-1.11 0-2 .89-2 2v12c0 1.1.89 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.11-.9-2-2-2zm0 14H3V5h18v12z"/>
                     </svg>
-                    <p>ChÆ°a cÃ³ stream nÃ o Ä‘ang cháº¡y</p>
-                    <button class="btn btn-primary" onclick="document.getElementById('add-stream').click();">ThÃªm stream</button>
+                    <p>Chưa có stream nào đang chạy</p>
+                    <button class="btn btn-primary" onclick="document.getElementById('add-stream').click();">Thêm stream</button>
                 </div>
             `;
         } else {
@@ -1133,7 +1133,7 @@ class App {
             await window.api.settings.set(key, value);
         }
 
-        this.showToast('CÃ i Ä‘áº·t Ä‘Ã£ Ä‘Æ°á»£c lÆ°u', 'success');
+        this.showToast('Cài đặt đã được lưu', 'success');
     }
 
     async loadAutoLiveSettings() {
@@ -1187,65 +1187,65 @@ class App {
     async saveAutoLiveSettings() {
         const result = await window.api.autoLive.saveSettings(this.collectAutoLiveSettings());
         if (!result.success) {
-            this.showToast(result.error || 'KhÃ´ng lÆ°u Ä‘Æ°á»£c Auto Live', 'error');
+            this.showToast(result.error || 'Không lưu được Auto Live', 'error');
             return;
         }
-        this.showToast('ÄÃ£ lÆ°u Auto Live', 'success');
-        this.setAutoLiveStatus('Saved. Náº¿u báº­t Auto Live, lá»‹ch sáº½ Ä‘Æ°á»£c Ä‘á»“ng bá»™ tá»« Google Sheet.');
+        this.showToast('Đã lưu Auto Live', 'success');
+        this.setAutoLiveStatus('Saved. Nếu bật Auto Live, lịch sẽ được đồng bộ từ Google Sheet.');
     }
 
     async previewAutoLiveSheet() {
         const url = document.getElementById('auto-live-google-url')?.value;
         if (!url) {
-            this.showToast('Nháº­p link Google Sheet trÆ°á»›c', 'warning');
+            this.showToast('Nhập link Google Sheet trước', 'warning');
             return;
         }
 
-        this.setAutoLiveStatus('Äang Ä‘á»c Google Sheet...');
+        this.setAutoLiveStatus('Đang đọc Google Sheet...');
         const result = await window.api.autoLive.previewGoogle(url);
         if (!result.success) {
-            this.showToast(result.error || 'KhÃ´ng Ä‘á»c Ä‘Æ°á»£c Google Sheet', 'error');
+            this.showToast(result.error || 'Không đọc được Google Sheet', 'error');
             this.setAutoLiveStatus(result.error || 'Preview failed');
             return;
         }
 
         const rows = result.rows || [];
-        this.setAutoLiveStatus(`Äá»c Ä‘Æ°á»£c ${rows.length} dÃ²ng há»£p lá»‡. DÃ²ng káº¿ tiáº¿p: ${rows[0]?.title || 'khÃ´ng cÃ³'}`);
+        this.setAutoLiveStatus(`Đọc được ${rows.length} dòng hợp lệ. Dòng kế tiếp: ${rows[0]?.title || 'không có'}`);
     }
 
     async syncAutoLiveSheet() {
         await this.saveAutoLiveSettings();
-        this.setAutoLiveStatus('Äang Ä‘á»“ng bá»™ lá»‹ch...');
+        this.setAutoLiveStatus('Đang đồng bộ lịch...');
         const result = await window.api.autoLive.sync();
         if (!result.success) {
-            this.showToast(result.error || 'KhÃ´ng Ä‘á»“ng bá»™ Ä‘Æ°á»£c lá»‹ch', 'error');
+            this.showToast(result.error || 'Không đồng bộ được lịch', 'error');
             this.setAutoLiveStatus(result.error || 'Sync failed');
             return;
         }
 
         const count = (result.upcoming || []).length;
-        this.showToast(`ÄÃ£ Ä‘á»“ng bá»™ ${count} lá»‹ch sáº¯p cháº¡y`, 'success');
-        this.setAutoLiveStatus(`ÄÃ£ háº¹n ${count} lá»‹ch sáº¯p cháº¡y tá»« Google Sheet.`);
+        this.showToast(`Đã đồng bộ ${count} lịch sắp chạy`, 'success');
+        this.setAutoLiveStatus(`Đã hẹn ${count} lịch sắp chạy từ Google Sheet.`);
     }
 
     async openAutoLiveChromeLogin() {
         await this.saveAutoLiveSettings();
-        this.setAutoLiveStatus('Äang má»Ÿ Chrome. HÃ£y Ä‘Äƒng nháº­p Facebook náº¿u cáº§n.');
+        this.setAutoLiveStatus('Đang mở Chrome. Hãy đăng nhập Facebook nếu cần.');
         const result = await window.api.autoLive.openChromeLogin();
         if (!result.success) {
-            this.showToast(result.error || 'KhÃ´ng má»Ÿ Ä‘Æ°á»£c Chrome', 'error');
+            this.showToast(result.error || 'Không mở được Chrome', 'error');
             this.setAutoLiveStatus(result.error || 'Open Chrome failed');
             return;
         }
-        this.showToast('ÄÃ£ má»Ÿ Chrome profile', 'info');
+        this.showToast('Đã mở Chrome profile', 'info');
     }
 
     async scanFacebookPages() {
         await this.saveAutoLiveSettings();
-        this.setAutoLiveStatus('Äang quÃ©t Facebook Page tá»« Chrome profile...');
+        this.setAutoLiveStatus('Đang quét Facebook Page từ Chrome profile...');
         const result = await window.api.autoLive.scanFacebookPages();
         if (!result.success) {
-            this.showToast(result.error || 'KhÃ´ng quÃ©t Ä‘Æ°á»£c Page', 'error');
+            this.showToast(result.error || 'Không quét được Page', 'error');
             this.setAutoLiveStatus(result.error || 'Scan page failed');
             return;
         }
@@ -1253,7 +1253,7 @@ class App {
         const pages = result.pages || [];
         const select = document.getElementById('auto-live-facebook-page');
         if (select) {
-            select.innerHTML = '<option value="">-- Chá»n page --</option>';
+            select.innerHTML = '<option value="">-- Chọn page --</option>';
             pages.forEach(page => {
                 const option = document.createElement('option');
                 option.value = page.url;
@@ -1262,8 +1262,8 @@ class App {
             });
         }
 
-        this.showToast(`QuÃ©t Ä‘Æ°á»£c ${pages.length} page`, pages.length ? 'success' : 'warning');
-        this.setAutoLiveStatus(`QuÃ©t Ä‘Æ°á»£c ${pages.length} page. Chá»n page trong danh sÃ¡ch.`);
+        this.showToast(`Quét được ${pages.length} page`, pages.length ? 'success' : 'warning');
+        this.setAutoLiveStatus(`Quét được ${pages.length} page. Chọn page trong danh sách.`);
     }
 
     async selectAutoLiveFacebookPage() {
@@ -1274,7 +1274,7 @@ class App {
 
         const result = await window.api.autoLive.selectFacebookPage({ name, url });
         if (!result.success) {
-            this.showToast(result.error || 'KhÃ´ng lÆ°u Ä‘Æ°á»£c page', 'error');
+            this.showToast(result.error || 'Không lưu được page', 'error');
             return;
         }
 
@@ -1282,12 +1282,12 @@ class App {
         const liveUrlInput = document.getElementById('auto-live-facebook-url');
         if (liveUrlInput) liveUrlInput.value = liveUrl;
         this.updateSelectedFacebookPageLabel(name, url);
-        this.showToast(`ÄÃ£ chá»n page: ${name}`, 'success');
+        this.showToast(`Đã chọn page: ${name}`, 'success');
     }
 
     updateSelectedFacebookPageLabel(name, url) {
         const label = document.getElementById('auto-live-selected-page');
-        if (label) label.textContent = url ? `Äang chá»n: ${name || url}` : '';
+        if (label) label.textContent = url ? `Đang chọn: ${name || url}` : '';
 
         const select = document.getElementById('auto-live-facebook-page');
         if (select && url && !Array.from(select.options).some(option => option.value === url)) {
@@ -1327,7 +1327,7 @@ class App {
             if (versionEl) versionEl.textContent = versionText;
             document.title = `VICdigi Live Streamer ${versionText}`;
         }
-        this.setUpdaterStatus(`PhiÃªn báº£n hiá»‡n táº¡i: ${result.version || ''}`);
+        this.setUpdaterStatus(`Phiên bản hiện tại: ${result.version || ''}`);
     }
 
     collectUpdaterSettings() {
@@ -1342,29 +1342,29 @@ class App {
     async saveUpdaterSettings() {
         const result = await window.api.updater.saveSettings(this.collectUpdaterSettings());
         if (!result.success) {
-            this.showToast(result.error || 'KhÃ´ng lÆ°u Ä‘Æ°á»£c cáº¥u hÃ¬nh update', 'error');
+            this.showToast(result.error || 'Không lưu được cấu hình update', 'error');
             return;
         }
 
-        this.showToast('ÄÃ£ lÆ°u cáº¥u hÃ¬nh update', 'success');
-        this.setUpdaterStatus('ÄÃ£ lÆ°u. Upload latest.yml + installer lÃªn Update URL Ä‘á»ƒ app tá»± cáº­p nháº­t.');
+        this.showToast('Đã lưu cấu hình update', 'success');
+        this.setUpdaterStatus('Đã lưu. Upload latest.yml + installer lên Update URL để app tự cập nhật.');
     }
 
     async checkForUpdates() {
         await this.saveUpdaterSettings();
-        this.setUpdaterStatus('Äang kiá»ƒm tra cáº­p nháº­t...');
+        this.setUpdaterStatus('Đang kiểm tra cập nhật...');
         const result = await window.api.updater.check();
         if (!result.success) {
-            this.showToast(result.error || 'KhÃ´ng kiá»ƒm tra Ä‘Æ°á»£c update', 'error');
+            this.showToast(result.error || 'Không kiểm tra được update', 'error');
             this.setUpdaterStatus(result.error || 'Check update failed');
         }
     }
 
     async downloadUpdate() {
-        this.setUpdaterStatus('Äang táº£i báº£n cáº­p nháº­t...');
+        this.setUpdaterStatus('Đang tải bản cập nhật...');
         const result = await window.api.updater.download();
         if (!result.success) {
-            this.showToast(result.error || 'KhÃ´ng táº£i Ä‘Æ°á»£c update', 'error');
+            this.showToast(result.error || 'Không tải được update', 'error');
             this.setUpdaterStatus(result.error || 'Download update failed');
         }
     }
@@ -1372,7 +1372,7 @@ class App {
     async installUpdate() {
         const result = await window.api.updater.install();
         if (!result.success) {
-            this.showToast(result.error || 'KhÃ´ng cÃ i Ä‘Æ°á»£c update', 'error');
+            this.showToast(result.error || 'Không cài được update', 'error');
         }
     }
 
@@ -1537,11 +1537,11 @@ class App {
         }
     }
 
-    // âœ… Load history page
+    // ✅ Load history page
     async loadHistoryPage() {
         const container = document.getElementById('history-list');
         if (!container) return;
-        container.innerHTML = '<p style="padding:1rem;color:var(--text-secondary)">Äang táº£i...</p>';
+        container.innerHTML = '<p style="padding:1rem;color:var(--text-secondary)">Đang tải...</p>';
 
         try {
             const result = await window.api.history.getAll(100);
@@ -1549,7 +1549,7 @@ class App {
                 container.innerHTML = `
                     <div class="empty-state">
                         <svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
-                        <p>ChÆ°a cÃ³ lá»‹ch sá»­ stream nÃ o</p>
+                        <p>Chưa có lịch sử stream nào</p>
                     </div>`;
                 return;
             }
@@ -1557,11 +1557,11 @@ class App {
             container.innerHTML = '';
             result.history.forEach(h => {
                 const dur = this._formatDurationSec(h.duration || 0);
-                const start = h.startTime ? new Date(h.startTime).toLocaleString('vi-VN') : 'â€”';
+                const start = h.startTime ? new Date(h.startTime).toLocaleString('vi-VN') : '—';
                 const reasonBadge = h.exitReason === 'error'
-                    ? `<span style="color:#f44336;font-size:12px">â— Lá»—i</span>`
-                    : `<span style="color:#4caf50;font-size:12px">â— Dá»«ng bÃ¬nh thÆ°á»ng</span>`;
-                const platformIcon = { facebook: 'ðŸ“˜', youtube: 'ðŸ”´', tiktok: 'ðŸŽµ' }[h.platform] || 'ðŸ“¡';
+                    ? `<span style="color:#f44336;font-size:12px">● Lỗi</span>`
+                    : `<span style="color:#4caf50;font-size:12px">● Dừng bình thường</span>`;
+                const platformIcon = { facebook: '📘', youtube: '🔴', tiktok: '🎵' }[h.platform] || '📡';
 
                 const row = document.createElement('div');
                 row.className = 'history-row';
@@ -1569,55 +1569,55 @@ class App {
                     <div class="history-icon">${platformIcon}</div>
                     <div class="history-info">
                         <strong>${h.name || 'Stream'}</strong>
-                        <span>${h.platform || ''} Â· ${h.quality || ''}</span>
+                        <span>${h.platform || ''} · ${h.quality || ''}</span>
                     </div>
                     <div class="history-time">
                         <span>${start}</span>
-                        <span>â± ${dur}</span>
+                        <span>⏱ ${dur}</span>
                     </div>
                     <div class="history-status">${reasonBadge}</div>
-                    ${h.errorMessage ? `<div class="history-error" title="${h.errorMessage}">âš ï¸</div>` : '<div></div>'}
+                    ${h.errorMessage ? `<div class="history-error" title="${h.errorMessage}">⚠️</div>` : '<div></div>'}
                 `;
                 container.appendChild(row);
             });
         } catch (err) {
-            container.innerHTML = `<p style="color:#f44336;padding:1rem">Lá»—i táº£i lá»‹ch sá»­: ${err.message}</p>`;
+            container.innerHTML = `<p style="color:#f44336;padding:1rem">Lỗi tải lịch sử: ${err.message}</p>`;
         }
     }
 
     async exportHistory() {
         const result = await window.api.history.exportJson();
         if (result.success) {
-            this.showToast(`âœ… ÄÃ£ xuáº¥t lá»‹ch sá»­: ${result.path}`, 'success');
+            this.showToast(`✅ Đã xuất lịch sử: ${result.path}`, 'success');
         } else {
-            this.showToast('Huá»· hoáº·c lá»—i khi xuáº¥t', 'info');
+            this.showToast('Huỷ hoặc lỗi khi xuất', 'info');
         }
     }
 
     async clearHistory() {
-        if (!confirm('XoÃ¡ toÃ n bá»™ lá»‹ch sá»­ stream?')) return;
+        if (!confirm('Xoá toàn bộ lịch sử stream?')) return;
         await window.api.history.clear();
-        this.showToast('ÄÃ£ xoÃ¡ lá»‹ch sá»­', 'success');
+        this.showToast('Đã xoá lịch sử', 'success');
         this.loadHistoryPage();
     }
 
     async exportConfig() {
         const result = await window.api.config.exportStreams();
         if (result.success) {
-            this.showToast(`âœ… ÄÃ£ xuáº¥t ${result.count} cáº¥u hÃ¬nh stream (khÃ´ng bao gá»“m stream key)`, 'success');
+            this.showToast(`✅ Đã xuất ${result.count} cấu hình stream (không bao gồm stream key)`, 'success');
         } else {
-            this.showToast('Huá»· hoáº·c lá»—i khi xuáº¥t', 'info');
+            this.showToast('Huỷ hoặc lỗi khi xuất', 'info');
         }
     }
 
     async importConfig() {
         const result = await window.api.config.importStreams();
         if (!result.success) {
-            this.showToast('Huá»· hoáº·c file khÃ´ng há»£p lá»‡', 'info');
+            this.showToast('Huỷ hoặc file không hợp lệ', 'info');
             return;
         }
-        // Show imported streams â€” user still needs to fill stream keys
-        this.showToast(`âœ… Nháº­p ${result.streams.length} cáº¥u hÃ¬nh. Vui lÃ²ng Ä‘iá»n stream key cho má»—i luá»“ng.`, 'success');
+        // Show imported streams — user still needs to fill stream keys
+        this.showToast(`✅ Nhập ${result.streams.length} cấu hình. Vui lòng điền stream key cho mỗi luồng.`, 'success');
         console.log('Imported stream configs:', result.streams);
     }
 
