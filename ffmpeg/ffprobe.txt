@@ -1,0 +1,3 @@
+// Temporary ffprobe stub
+// This file is a placeholder. Please download real ffprobe.exe
+console.log('FFprobe placeholder - Please download real ffprobe.exe');

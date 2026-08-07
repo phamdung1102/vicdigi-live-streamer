@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VICdigi Live Streamer - Tool Live Stream Đa Luồng</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/dashboard.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="logo">
+                <img src="../../../assets/icon.png" alt="VICdigi Logo">
+                <h2>VICdigi Live</h2>
+                <span class="version">v1.0.2</span>
+            </div>
+            
+            <nav class="nav-menu">
+                <a href="#dashboard" class="nav-item active" data-page="dashboard">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
+                    </svg>
+                    <span>Dashboard</span>
+                </a>
+                
+                <a href="#streams" class="nav-item" data-page="streams">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z"/>
+                    </svg>
+                    <span>Quản lý Stream</span>
+                </a>
+                
+                <a href="#playlist" class="nav-item" data-page="playlist">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9h-4v4h-2v-4H9V9h4V5h2v4h4v2z"/>
+                    </svg>
+                    <span>Playlist</span>
+                </a>
+                
+                <a href="#schedule" class="nav-item" data-page="schedule">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+                    </svg>
+                    <span>Hẹn giờ</span>
+                </a>
+                
+                <a href="#settings" class="nav-item" data-page="settings">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+                    </svg>
+                    <span>Cài đặt</span>
+                </a>
+
+                <a href="#history" class="nav-item" data-page="history">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/>
+                    </svg>
+                    <span>Lịch sử</span>
+                </a>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="system-info">
+                    <div class="info-item">
+                        <span class="label">CPU:</span>
+                        <span class="value" id="cpu-usage">—</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">RAM:</span>
+                        <span class="value" id="ram-usage">— MB</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Luồng:</span>
+                        <span class="value" id="upload-speed">—</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Dashboard Page -->
+            <section id="dashboard" class="page active">
+                <header class="page-header">
+                    <h1>Dashboard</h1>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" id="quick-stream">
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7z"/>
+                            </svg>
+                            Live nhanh
+                        </button>
+                    </div>
+                </header>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon active">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+                            </svg>
+                        </div>
+                        <div class="stat-content">
+                            <h3>Đang phát</h3>
+                            <p class="stat-value" id="active-streams">0</p>
+                            <span class="stat-label">luồng</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon scheduled">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+                            </svg>
+                        </div>
+                        <div class="stat-content">
+                            <h3>Đã lên lịch</h3>
+                            <p class="stat-value" id="scheduled-streams">0</p>
+                            <span class="stat-label">lịch phát</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon playlist">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M4 10h12v2H4zm0-4h12v2H4zm0 8h8v2H4zm10 0v6l5-3z"/>
+                            </svg>
+                        </div>
+                        <div class="stat-content">
+                            <h3>Video trong playlist</h3>
+                            <p class="stat-value" id="playlist-count">0</p>
+                            <span class="stat-label">video</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon uptime">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM16.23 18L12 15.45 7.77 18l1.12-4.81-3.73-3.23 4.92-.42L12 5l1.92 4.53 4.92.42-3.73 3.23L16.23 18z"/>
+                            </svg>
+                        </div>
+                        <div class="stat-content">
+                            <h3>Tổng thời gian phát</h3>
+                            <p class="stat-value" id="total-uptime">0h</p>
+                            <span class="stat-label">hôm nay</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Streams -->
+                <div class="active-streams-section">
+                    <h2>Luồng đang hoạt động</h2>
+                    <div id="active-streams-list" class="streams-list">
+                        <div class="empty-state">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+                            </svg>
+                            <p>Không có luồng nào đang phát</p>
+                            <button class="btn btn-primary" onclick="window.app.showPage('streams')">Bắt đầu stream</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activities -->
+                <div class="activities-section">
+                    <h2>Hoạt động gần đây</h2>
+                    <div id="activities-list" class="activities-list">
+                        <div class="activity-item">
+                            <div class="activity-icon info">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+                                </svg>
+                            </div>
+                            <div class="activity-content">
+                                <p>Chào mừng đến với VICdigi Live Streamer!</p>
+                                <span class="activity-time">Vừa xong</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Streams Management Page -->
+            <section id="streams" class="page">
+                <header class="page-header">
+                    <h1>Quản lý Stream</h1>
+                    <div class="header-actions">
+                        <button class="btn btn-success" id="add-stream">
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                            </svg>
+                            Thêm luồng
+                        </button>
+                    </div>
+                </header>
+
+                <div class="streams-container">
+                    <div class="stream-cards" id="stream-cards">
+                        <div class="empty-state">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M21 3H3c-1.11 0-2 .89-2 2v12c0 1.1.89 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.11-.9-2-2-2zm0 14H3V5h18v12z"/>
+                            </svg>
+                            <p>Chưa có stream nào được cấu hình</p>
+                            <button class="btn btn-primary" id="add-first-stream">Thêm stream đầu tiên</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Playlist Page -->
+            <section id="playlist" class="page">
+                <header class="page-header">
+                    <h1>Quản lý Playlist</h1>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" id="select-folder">
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <path d="M10 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2h-8l-2-2z"/>
+                            </svg>
+                            Chọn thư mục video
+                        </button>
+                    </div>
+                </header>
+
+                <div class="playlist-settings">
+                    <div class="setting-card">
+                        <h3>Cài đặt phát</h3>
+                        <div class="form-group">
+                            <label>Chế độ phát</label>
+                            <select id="playback-mode">
+                                <option value="sequential">Tuần tự</option>
+                                <option value="random">Ngẫu nhiên</option>
+                                <option value="loop">Lặp lại</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="auto-skip-error" checked>
+                                Tự động bỏ qua file lỗi
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="hot-reload">
+                                Tự động nhận video mới
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="video-list-container">
+                    <h3>Danh sách video</h3>
+                    <div id="video-list" class="video-list">
+                        <div class="empty-state">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9h-4v4h-2v-4H9V9h4V5h2v4h4v2z"/>
+                            </svg>
+                            <p>Chưa chọn thư mục video</p>
+                            <button class="btn btn-primary" id="select-folder-empty">Chọn thư mục</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Schedule Page -->
+            <section id="schedule" class="page">
+                <header class="page-header">
+                    <h1>Hẹn giờ phát sóng</h1>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" id="add-schedule">
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                            </svg>
+                            Thêm lịch phát
+                        </button>
+                    </div>
+                </header>
+
+                <div class="schedules-container">
+                    <div id="schedules-list" class="schedules-list">
+                        <div class="empty-state">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+                            </svg>
+                            <p>Chưa có lịch phát nào</p>
+                            <button class="btn btn-primary" onclick="document.getElementById('add-schedule').click()">Tạo lịch phát</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Settings Page -->
+            <section id="settings" class="page">
+                <header class="page-header">
+                    <h1>Cài đặt</h1>
+                </header>
+
+                <div class="settings-container">
+                    <div class="setting-section">
+                        <h3>Cài đặt chung</h3>
+                        <div class="setting-item">
+                            <label>
+                                <input type="checkbox" id="start-minimized">
+                                Khởi động ẩn vào system tray
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <label>
+                                <input type="checkbox" id="auto-start">
+                                Khởi động cùng Windows
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <label>
+                                <input type="checkbox" id="show-notifications" checked>
+                                Hiển thị thông báo
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="setting-section">
+                        <h3>FFmpeg</h3>
+                        <div class="setting-item">
+                            <label>Đường dẫn FFmpeg</label>
+                            <div class="input-group">
+                                <input type="text" id="ffmpeg-path" readonly value="ffmpeg/ffmpeg.exe">
+                                <button class="btn btn-secondary" id="browse-ffmpeg">Chọn</button>
+                            </div>
+                        </div>
+                        <div class="setting-item">
+                            <label>Thread count</label>
+                            <input type="number" id="thread-count" value="0" min="0" max="16">
+                            <small>0 = tự động</small>
+                        </div>
+                    </div>
+
+                    <div class="setting-section">
+                        <h3>Giới hạn hệ thống</h3>
+                        <div class="setting-item">
+                            <label>Giới hạn CPU (%)</label>
+                            <input type="number" id="cpu-limit" value="80" min="10" max="100">
+                        </div>
+                        <div class="setting-item">
+                            <label>Giới hạn RAM (MB)</label>
+                            <input type="number" id="ram-limit" value="2048" min="512" max="8192">
+                        </div>
+                    </div>
+
+                    <div class="setting-section">
+                        <button class="btn btn-primary" id="save-settings">Lưu cài đặt</button>
+                    </div>
+
+                    <div class="setting-section">
+                        <h3>Tự động cập nhật</h3>
+                        <div class="setting-item">
+                            <label>
+                                <input type="checkbox" id="updater-enabled">
+                                Bật kiểm tra cập nhật
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <label>Update URL</label>
+                            <input type="text" id="updater-url" placeholder="https://your-domain.com/vicdigi-live/">
+                            <small>URL này phải chứa `latest.yml` và file installer `.exe` được build trong thư mục `dist/`.</small>
+                        </div>
+                        <div class="setting-item">
+                            <label>
+                                <input type="checkbox" id="updater-check-on-start" checked>
+                                Tự kiểm tra khi mở app
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <label>
+                                <input type="checkbox" id="updater-auto-download">
+                                Tự tải khi có bản mới
+                            </label>
+                        </div>
+                        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+                            <button class="btn btn-primary" id="save-updater-settings">Lưu cập nhật</button>
+                            <button class="btn btn-secondary" id="check-update">Kiểm tra ngay</button>
+                            <button class="btn btn-secondary" id="download-update">Tải bản mới</button>
+                            <button class="btn btn-success" id="install-update">Cài và khởi động lại</button>
+                        </div>
+                        <div id="updater-status" style="margin-top:12px;font-size:13px;color:var(--text-secondary)"></div>
+                    </div>
+
+                    <div class="setting-section">
+                        <h3>Auto Live từ Google Sheet</h3>
+                        <div class="setting-item">
+                            <label>
+                                <input type="checkbox" id="auto-live-enabled">
+                                Bật tự động lấy lịch, lấy key và live
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <label>Link Google Sheet / CSV</label>
+                            <input type="text" id="auto-live-google-url" placeholder="https://docs.google.com/spreadsheets/d/...">
+                            <small>Cột hỗ trợ: title, date/ngaydang, time/gio, videoPath, description, duration.</small>
+                        </div>
+                        <div class="setting-item">
+                            <label>Facebook Live Producer URL</label>
+                            <input type="text" id="auto-live-facebook-url" placeholder="https://www.facebook.com/live/producer">
+                        </div>
+                        <div class="setting-item">
+                            <label>Facebook Page</label>
+                            <select id="auto-live-facebook-page">
+                                <option value="">-- Chưa chọn page --</option>
+                            </select>
+                            <small id="auto-live-selected-page"></small>
+                        </div>
+                        <div class="setting-item">
+                            <label>Chrome path</label>
+                            <input type="text" id="auto-live-chrome-path" placeholder="C:\Program Files\Google\Chrome\Application\chrome.exe">
+                        </div>
+                        <div class="setting-item">
+                            <label>Chrome user data dir</label>
+                            <input type="text" id="auto-live-chrome-user-data" placeholder="C:\Users\...\AppData\Local\Google\Chrome\User Data">
+                        </div>
+                        <div class="setting-item">
+                            <label>Chrome profile</label>
+                            <input type="text" id="auto-live-chrome-profile" value="Default">
+                        </div>
+                        <div class="setting-item">
+                            <label>Video mặc định nếu Sheet không có videoPath</label>
+                            <input type="text" id="auto-live-default-video" placeholder="E:\video\live.mp4">
+                        </div>
+                        <div class="form-row">
+                            <div class="setting-item">
+                                <label>Quality</label>
+                                <select id="auto-live-quality">
+                                    <option value="720p">720p</option>
+                                    <option value="1080p">1080p</option>
+                                    <option value="480p">480p</option>
+                                    <option value="360p">360p</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <label>Bitrate</label>
+                                <input type="number" id="auto-live-bitrate" value="4000" min="1000" max="9000">
+                            </div>
+                            <div class="setting-item">
+                                <label>Poll phút</label>
+                                <input type="number" id="auto-live-poll" value="10" min="1" max="1440">
+                            </div>
+                        </div>
+                        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+                            <button class="btn btn-primary" id="save-auto-live-settings">Lưu Auto Live</button>
+                            <button class="btn btn-secondary" id="open-auto-live-chrome">Mở Chrome đăng nhập</button>
+                            <button class="btn btn-secondary" id="scan-facebook-pages">Quét Page</button>
+                            <button class="btn btn-secondary" id="preview-auto-live-sheet">Xem lịch Google</button>
+                            <button class="btn btn-secondary" id="sync-auto-live-sheet">Đồng bộ hẹn giờ</button>
+                        </div>
+                        <div id="auto-live-status" style="margin-top:12px;font-size:13px;color:var(--text-secondary)"></div>
+                    </div>
+
+                    <!-- ✅ Export / Import cấu hình -->
+                    <div class="setting-section">
+                        <h3>Sao lưu & Khôi phục</h3>
+                        <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">
+                            Xuất cấu hình stream để dùng trên máy khác (stream key không được xuất vì lý do bảo mật).
+                        </p>
+                        <div style="display:flex;gap:10px;flex-wrap:wrap">
+                            <button class="btn btn-secondary" onclick="window.app.exportConfig()">
+                                <svg class="icon" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                                Xuất cấu hình stream
+                            </button>
+                            <button class="btn btn-secondary" onclick="window.app.importConfig()">
+                                <svg class="icon" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+                                Nhập cấu hình stream
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ✅ History Page -->
+            <section id="history" class="page">
+                <header class="page-header">
+                    <h1>Lịch sử phát sóng</h1>
+                    <div class="header-actions">
+                        <button class="btn btn-secondary" onclick="window.app.exportHistory()">
+                            <svg class="icon" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                            Xuất JSON
+                        </button>
+                        <button class="btn btn-danger" onclick="window.app.clearHistory()">
+                            <svg class="icon" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                            Xoá lịch sử
+                        </button>
+                    </div>
+                </header>
+
+                <style>
+                .history-row {
+                    display: grid;
+                    grid-template-columns: 36px 1fr auto auto auto;
+                    align-items: center;
+                    gap: 12px;
+                    padding: 12px 16px;
+                    border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.08));
+                    transition: background 0.15s;
+                }
+                .history-row:hover { background: var(--bg-hover, rgba(255,255,255,0.04)); }
+                .history-icon { font-size: 22px; text-align: center; }
+                .history-info strong { display: block; font-size: 14px; }
+                .history-info span { font-size: 12px; color: var(--text-secondary, #aaa); }
+                .history-time { text-align: right; font-size: 12px; color: var(--text-secondary, #aaa); }
+                .history-time span { display: block; }
+                .history-status { font-size: 12px; white-space: nowrap; }
+                .history-error { cursor: help; }
+                </style>
+
+                <div class="history-container" style="background:var(--bg-secondary);border-radius:8px;overflow:hidden">
+                    <div id="history-list"></div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Add Stream Modal -->
+        <div id="add-stream-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Thêm luồng stream mới</h2>
+                    <button class="close-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="stream-form">
+                        <div class="form-group">
+                            <label>Nguồn video</label>
+                            <div class="video-source-options">
+                                <label>
+                                    <input type="radio" name="videoSourceType" value="file" checked>
+                                    File video
+                                </label>
+                                <label>
+                                    <input type="radio" name="videoSourceType" value="playlist">
+                                    Playlist
+                                </label>
+                            </div>
+                            <div id="video-file-input" class="form-group">
+                                <input type="text" name="videoPath" id="video-path" placeholder="Chọn file video..." readonly>
+                                <button type="button" class="btn btn-secondary" id="select-video-file">Chọn file</button>
+                            </div>
+                            <div id="playlist-select-input" class="form-group" style="display: none;">
+                                <select name="playlistId" id="playlist-select">
+                                    <option value="">-- Chọn playlist --</option>
+                                </select>
+                                <button type="button" class="btn btn-secondary" onclick="playlistManager.showCreatePlaylistDialog()">Tạo playlist mới</button>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Tên luồng</label>
+                            <input type="text" name="name" placeholder="VD: Stream Facebook Sáng" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Nền tảng</label>
+                            <select name="platform" id="platform-select">
+                                <option value="facebook">Facebook</option>
+                                <option value="youtube">YouTube</option>
+                                <option value="tiktok">TikTok</option>
+                                <option value="custom">Tùy chỉnh (RTMP)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>RTMP URL</label>
+                            <input type="text" name="rtmpUrl" id="rtmp-url" placeholder="rtmp://..." required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Stream Key</label>
+                            <input type="password" name="streamKey" placeholder="Stream key của bạn" required>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Chất lượng</label>
+                                <select name="quality">
+                                    <option value="360p">360p</option>
+                                    <option value="480p">480p</option>
+                                    <option value="720p" selected>720p</option>
+                                    <option value="1080p">1080p</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>FPS</label>
+                                <select name="fps">
+                                    <option value="30" selected>30 FPS</option>
+                                    <option value="60">60 FPS</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Bitrate (kbps)</label>
+                                <input type="number" name="bitrate" value="4000" min="1000" max="9000">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Hẹn giờ tắt</label>
+                            <div class="timer-options">
+                                <label>
+                                    <input type="radio" name="timerType" value="none" checked>
+                                    Không hẹn
+                                </label>
+                                <label>
+                                    <input type="radio" name="timerType" value="duration">
+                                    Sau khoảng thời gian
+                                </label>
+                                <label>
+                                    <input type="radio" name="timerType" value="specific">
+                                    Vào lúc
+                                </label>
+                            </div>
+                            <div id="timer-duration-input" class="form-group" style="display: none;">
+                                <input type="number" name="timerHours" min="0" max="24" placeholder="Giờ" style="width: 80px;">
+                                <span>giờ</span>
+                                <input type="number" name="timerMinutes" min="0" max="59" placeholder="Phút" style="width: 80px;">
+                                <span>phút</span>
+                            </div>
+                            <div id="timer-specific-input" class="form-group" style="display: none;">
+                                <input type="time" name="timerTime">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" name="autoRestart">
+                                Tự động khởi động lại khi gặp lỗi
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" name="loopVideo" id="loop-video-check">
+                                🔁 Lặp lại video liên tục (loop)
+                            </label>
+                            <small style="color:var(--text-tertiary);display:block;margin-top:4px">
+                                Áp dụng cho cả file đơn và playlist (chế độ loop)
+                            </small>
+                        </div>
+
+                        <!-- ✅ Overlay / Watermark -->
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" name="overlayEnabled" id="overlay-enabled-check">
+                                Thêm chữ overlay / watermark
+                            </label>
+                        </div>
+                        <div id="overlay-options" style="display:none;background:var(--bg-tertiary);border-radius:8px;padding:12px;margin-top:-8px">
+                            <div class="form-row" style="grid-template-columns:1fr 1fr">
+                                <div class="form-group">
+                                    <label>Nội dung text</label>
+                                    <input type="text" name="overlayText" placeholder="VD: VICdigi Live" value="VICdigi Live">
+                                </div>
+                                <div class="form-group">
+                                    <label>Vị trí</label>
+                                    <select name="overlayPosition">
+                                        <option value="top-left">Trên trái</option>
+                                        <option value="top-right">Trên phải</option>
+                                        <option value="bottom-left">Dưới trái</option>
+                                        <option value="bottom-right">Dưới phải</option>
+                                        <option value="center">Giữa màn hình</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-row" style="grid-template-columns:80px 1fr">
+                                <div class="form-group">
+                                    <label>Cỡ chữ</label>
+                                    <input type="number" name="overlayFontSize" value="28" min="12" max="72">
+                                </div>
+                                <div class="form-group">
+                                    <label>Màu chữ</label>
+                                    <select name="overlayColor">
+                                        <option value="white">Trắng</option>
+                                        <option value="yellow">Vàng</option>
+                                        <option value="red">Đỏ</option>
+                                        <option value="cyan">Xanh lam</option>
+                                        <option value="black">Đen</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary cancel-modal">Hủy</button>
+                            <button type="submit" class="btn btn-primary">Thêm luồng</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="../js/app.js"></script>
+    <script src="../js/stream-manager.js"></script>
+    <script src="../js/playlist-manager.js"></script>
+    <script src="../js/schedule-manager.js"></script>
+    <script src="../js/ui-controller.js"></script>
+</body>
+</html>
