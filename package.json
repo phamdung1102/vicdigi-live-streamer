@@ -35,6 +35,7 @@
     "build": {
     "appId": "com.vicdigi.livestreamer",
     "productName": "VICdigi Live Streamer",
+    "artifactName": "VICdigi.Live.Streamer.Setup.${version}.${ext}",
     "directories": {
       "output": "dist"
     },
