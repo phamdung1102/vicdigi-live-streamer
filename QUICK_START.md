@@ -54,7 +54,16 @@ Installer se duoc tao trong `dist/`.
 2. Share Sheet o che do xem bang link.
 3. Mo Settings trong app.
 4. Dan link vao `Auto Live tu Google Sheet`, hoac dan Apps Script Web App URL.
-5. Chon Chrome profile da dang nhap Facebook.
-6. Bam `Mo Chrome dang nhap` neu can login/checkpoint.
+5. De mac dinh Chrome profile rieng cua app: `%APPDATA%\VICdigi Live Streamer\ChromeProfile`.
+6. Bam `Mo Chrome dang nhap`, dang nhap Facebook trong cua so Chrome rieng nay neu chua login.
 7. Bam `Quet Page`, chon page can live.
 8. Bam `Xem lich Google`, sau do `Dong bo hen gio`.
+
+Mau cot Google Sheet:
+
+```text
+title,date,time,videoPath,description,duration,quality,bitrate,fps,pageUrl,liveUrl
+MAU 1 - Tieu de live luc 20h30,08/08/2026,20:30,E:\Videos\live-01.mp4,Mo ta live,60,1080p,4000,30,https://www.facebook.com/ten-page-cua-ban,
+```
+
+Nen de `date` va `time` dang text: `08/08/2026`, `20:30`.

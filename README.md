@@ -88,7 +88,13 @@ fps          30 hoac 60.
 liveUrl      Link Facebook Live Producer neu muon override mac dinh.
 ```
 
-Chrome automation dung Chrome profile da dang nhap san. App khong luu mat khau Facebook. Neu Facebook yeu cau 2FA, CAPTCHA hoac checkpoint, Chrome se mo ra de thao tac tay, sau do app tiep tuc quet key.
+Chrome automation dung profile rieng cua app, mac dinh tai:
+
+```text
+%APPDATA%\VICdigi Live Streamer\ChromeProfile
+```
+
+Profile nay tach rieng voi Chrome chinh cua may. Can bam `Mo Chrome dang nhap` de dang nhap Facebook trong profile rieng nay mot lan, sau do bam `Quet Page` de app doc danh sach Page. App khong luu mat khau Facebook. Neu Facebook yeu cau 2FA, CAPTCHA hoac checkpoint, Chrome se mo ra de thao tac tay, sau do app tiep tuc quet key.
 
 Trong Settings co cac nut:
 
@@ -98,6 +104,15 @@ Quet Page           Quet cac Facebook Page trong profile dang login de chon page
 Xem lich Google     Doc thu Google Sheet/Apps Script.
 Dong bo hen gio     Tao job tu cac dong lich sap toi.
 ```
+
+Vi du dong Google Sheet:
+
+```text
+title | date | time | videoPath | description | duration | quality | bitrate | fps | pageUrl | liveUrl
+MAU 1 - Tieu de live luc 20h30 | 08/08/2026 | 20:30 | E:\Videos\live-01.mp4 | Mo ta live | 60 | 1080p | 4000 | 30 | https://www.facebook.com/ten-page-cua-ban |
+```
+
+Nen format cot `date` va `time` thanh Plain text, hoac nhap them dau nhay don trong Google Sheet nhu `'08/08/2026` va `'20:30` de tranh Google tu dao ngay/thang.
 
 ## Bao mat stream key
 

@@ -19,12 +19,19 @@ class AutoLiveService extends EventEmitter {
 
     async getSettings() {
         const saved = await this.database.getSetting(this.settingsKey);
+        const defaultChromeUserDataDir = path.join(process.env.LOCALAPPDATA || '', 'Google', 'Chrome', 'User Data');
+        const appChromeUserDataDir = this.getAppChromeUserDataDir();
+        const migratedSaved = { ...(saved || {}) };
+        if (!migratedSaved.chromeUserDataDir || migratedSaved.chromeUserDataDir === defaultChromeUserDataDir) {
+            migratedSaved.chromeUserDataDir = appChromeUserDataDir;
+        }
+
         return {
             enabled: false,
             googleScheduleUrl: '',
             pollMinutes: 10,
             chromePath: this.findChromePath(),
-            chromeUserDataDir: path.join(process.env.LOCALAPPDATA || '', 'Google', 'Chrome', 'User Data'),
+            chromeUserDataDir: appChromeUserDataDir,
             chromeProfile: 'Default',
             chromeDebugPort: 9223,
             facebookLiveUrl: 'https://www.facebook.com/live/producer',
@@ -35,7 +42,7 @@ class AutoLiveService extends EventEmitter {
             defaultBitrate: 4000,
             defaultFps: 30,
             keyScanTimeoutSeconds: 180,
-            ...saved
+            ...migratedSaved
         };
     }
 
@@ -210,8 +217,8 @@ class AutoLiveService extends EventEmitter {
 
     normalizeRow(row, index) {
         const title = row.title || row.tieude || row.name || row.ten || '';
-        const dateValue = row.datetime || row.scheduledat || row.ngaydang || row.ngaygio || row.date || row.ngay || '';
-        const timeValue = row.time || row.gio || '';
+        const dateValue = this.normalizeDateCell(row.datetime || row.scheduledat || row.ngaydang || row.ngaygio || row.date || row.ngay || '');
+        const timeValue = this.normalizeTimeCell(row.time || row.gio || '');
         const scheduledAt = this.parseDateTime(dateValue, timeValue);
         if (!title || !scheduledAt) return null;
 
@@ -243,6 +250,18 @@ class AutoLiveService extends EventEmitter {
         if (!Number.isNaN(direct.getTime())) return direct;
 
         return null;
+    }
+
+    normalizeDateCell(value) {
+        const text = String(value || '').trim();
+        const match = text.match(/^(\d{1,2}[/-]\d{1,2}[/-]\d{4})(?:\s+00:00)?$/);
+        return match ? match[1] : text;
+    }
+
+    normalizeTimeCell(value) {
+        const text = String(value || '').trim();
+        const match = text.match(/(?:^|\s)(\d{1,2}:\d{2})(?:\s|$)/);
+        return match ? match[1] : text;
     }
 
     async executeRow(row) {
@@ -319,6 +338,11 @@ class AutoLiveService extends EventEmitter {
         const pageUrl = String(settings.selectedFacebookPageUrl || '').replace(/\/$/, '');
         if (!pageUrl) return '';
         return `${pageUrl}/live/producer`;
+    }
+
+    getAppChromeUserDataDir() {
+        const base = process.env.APPDATA || process.cwd();
+        return path.join(base, 'VICdigi Live Streamer', 'ChromeProfile');
     }
 
     async openChromeLogin() {
