@@ -5,6 +5,7 @@ const fs = require('fs');
 const os = require('os');
 
 app.setName('VICdigi Live Streamer');
+const UPDATE_FEED_URL = 'https://github.com/phamdung1102/vicdigi-live-streamer/releases/latest/download/';
 if (!app.isPackaged) {
   app.commandLine.appendSwitch('ignore-certificate-errors');
   app.commandLine.appendSwitch('allow-insecure-localhost', 'true');
@@ -73,9 +74,9 @@ function sendUpdateStatus(status, extra = {}) {
 async function getUpdaterSettings() {
   const saved = db ? await db.getSetting('updater') : null;
   return {
-    enabled: false,
-    autoDownload: false,
-    updateUrl: '',
+    enabled: true,
+    autoDownload: true,
+    updateUrl: UPDATE_FEED_URL,
     checkOnStart: true,
     ...saved
   };
@@ -83,6 +84,7 @@ async function getUpdaterSettings() {
 
 async function saveUpdaterSettings(settings) {
   const merged = { ...(await getUpdaterSettings()), ...settings };
+  if (!merged.updateUrl) merged.updateUrl = UPDATE_FEED_URL;
   if (db) await db.saveSetting('updater', merged);
   configureAutoUpdater(merged);
   return merged;
@@ -92,10 +94,11 @@ function configureAutoUpdater(settings) {
   autoUpdater.autoDownload = !!settings.autoDownload;
   autoUpdater.autoInstallOnAppQuit = false;
 
-  if (settings.updateUrl) {
+  const updateUrl = settings.updateUrl || UPDATE_FEED_URL;
+  if (updateUrl) {
     autoUpdater.setFeedURL({
       provider: 'generic',
-      url: settings.updateUrl
+      url: updateUrl
     });
   }
 }
@@ -176,7 +179,8 @@ function createWindow() {
     icon: path.join(__dirname, '../../assets/icon.ico'),
     titleBarStyle: 'default',
     frame: true,
-    backgroundColor: '#1a1b26'
+    backgroundColor: '#1a1b26',
+    title: `${app.getName()} v${app.getVersion()}`
   });
 
   const indexPath = path.join(__dirname, '../renderer/pages/index.html');
@@ -189,6 +193,7 @@ function createWindow() {
   }
 
   mainWindow.once('ready-to-show', () => {
+    mainWindow.setTitle(`${app.getName()} v${app.getVersion()}`);
     mainWindow.show();
     if (!isProduction) {
       mainWindow.webContents.openDevTools();
@@ -232,7 +237,7 @@ async function initializeServices() {
     if (autoLiveSettings.enabled) await autoLiveService.reload();
     const updaterSettings = await getUpdaterSettings();
     configureAutoUpdater(updaterSettings);
-    if (app.isPackaged && updaterSettings.enabled && updaterSettings.checkOnStart && updaterSettings.updateUrl) {
+    if (app.isPackaged && updaterSettings.enabled && updaterSettings.checkOnStart) {
       setTimeout(() => autoUpdater.checkForUpdates().catch(() => {}), 5000);
     }
 
@@ -659,7 +664,6 @@ ipcMain.handle('updater:check', async () => {
   try {
     const settings = await getUpdaterSettings();
     if (!app.isPackaged) return { success: false, error: 'Auto update only works in packaged app' };
-    if (!settings.updateUrl) return { success: false, error: 'Update URL is empty' };
     configureAutoUpdater(settings);
     await autoUpdater.checkForUpdates();
     return { success: true };
