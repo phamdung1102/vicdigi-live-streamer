@@ -291,12 +291,13 @@ class AutoLiveService extends EventEmitter {
 
     async getFacebookStreamInfo(row, settings) {
         const port = Number(settings.chromeDebugPort) || 9223;
-        await this.ensureChrome(settings, port);
+        await this.ensureChrome(settings, port, null, { visible: false });
 
-        const client = await CDP({ port });
+        const client = await this.connectChromePage(port, /facebook\.com/i);
         try {
             const { Page, Runtime } = client;
             await Page.enable();
+            await this.minimizeChromeWindow(client);
 
             const liveUrl = row.facebookLiveUrl || this.buildPageLiveUrl(settings) || settings.facebookLiveUrl;
             await Page.navigate({ url: liveUrl });
@@ -337,6 +338,8 @@ class AutoLiveService extends EventEmitter {
     buildPageLiveUrl(settings) {
         const pageUrl = String(settings.selectedFacebookPageUrl || '').replace(/\/$/, '');
         if (!pageUrl) return '';
+        const profileMatch = pageUrl.match(/profile\.php\?id=([^&]+)/);
+        if (profileMatch) return `https://www.facebook.com/${profileMatch[1]}/live/producer`;
         return `${pageUrl}/live/producer`;
     }
 
@@ -347,49 +350,154 @@ class AutoLiveService extends EventEmitter {
 
     async openChromeLogin() {
         const settings = await this.getSettings();
-        await this.ensureChrome(settings, Number(settings.chromeDebugPort) || 9223, 'https://www.facebook.com/');
+        await this.ensureChrome(settings, Number(settings.chromeDebugPort) || 9223, 'https://www.facebook.com/', { visible: true });
         return { success: true };
     }
 
     async scanFacebookPages() {
         const settings = await this.getSettings();
         const port = Number(settings.chromeDebugPort) || 9223;
-        await this.ensureChrome(settings, port, 'https://www.facebook.com/pages/?category=your_pages');
+        await this.ensureChrome(settings, port, 'https://www.facebook.com/pages/?category=your_pages', { visible: false });
 
-        const client = await CDP({ port });
+        const client = await this.connectChromePage(port, /facebook\.com/i);
         try {
             const { Page, Runtime } = client;
             await Page.enable();
-            await Page.navigate({ url: 'https://www.facebook.com/pages/?category=your_pages' });
-            await this.delay(6000);
+            await this.minimizeChromeWindow(client);
+            const sources = [
+                'https://www.facebook.com/pages/?category=your_pages',
+                'https://www.facebook.com/pages/manage',
+                'https://www.facebook.com/bookmarks/pages'
+            ];
+            const pages = [];
+            const seen = new Set();
 
-            const result = await Runtime.evaluate({
-                returnByValue: true,
-                expression: `(() => {
-                    const anchors = Array.from(document.querySelectorAll('a[href]'));
-                    const pages = [];
-                    const seen = new Set();
-                    for (const a of anchors) {
-                        const name = (a.innerText || a.textContent || '').trim().replace(/\\s+/g, ' ');
-                        const href = a.href || '';
-                        if (!name || name.length < 2 || name.length > 120) continue;
-                        if (!href.startsWith('https://www.facebook.com/')) continue;
-                        if (/\\/pages\\/?|\\/profile\\.php|\\/groups\\//.test(href)) continue;
-                        if (/[?&](sk|ref|comment_id|story_fbid)=/.test(href)) continue;
-                        const url = href.split('?')[0].replace(/\\/$/, '');
-                        const slug = url.replace('https://www.facebook.com/', '');
-                        if (!slug || slug.includes('/') || ['home','watch','marketplace','friends','notifications','messages'].includes(slug)) continue;
-                        if (seen.has(url)) continue;
-                        seen.add(url);
-                        pages.push({ name, url });
-                    }
-                    return pages.slice(0, 50);
-                })()`
-            });
+            for (const url of sources) {
+                this.emit('autoLive:status', { status: 'scanning-pages', url });
+                await Page.navigate({ url });
+                await this.delay(5000);
+                for (let i = 0; i < 5; i++) {
+                    await Runtime.evaluate({ expression: 'window.scrollTo(0, document.body.scrollHeight)' }).catch(() => {});
+                    await this.delay(1000);
+                }
 
-            return (result.result && result.result.value) || [];
+                const result = await Runtime.evaluate({
+                    returnByValue: true,
+                    expression: this.getFacebookPageScanExpression()
+                });
+
+                const items = (result.result && result.result.value) || [];
+                for (const page of items) {
+                    if (!page.url || seen.has(page.url)) continue;
+                    seen.add(page.url);
+                    pages.push(page);
+                }
+            }
+
+            return pages.slice(0, 50);
         } finally {
             await client.close();
+        }
+    }
+
+    getFacebookPageScanExpression() {
+        return `(() => {
+            const reserved = new Set([
+                'home','watch','marketplace','friends','notifications','messages','groups','events','gaming',
+                'reel','reels','stories','help','privacy','policies','settings','login','recover','pages',
+                'ads','business','commerce','fundraisers','memories','saved','videos','live','professional_dashboard',
+                'latest','ad_center'
+            ]);
+            const badTextTokens = new Set([
+                'home','watch','marketplace','friends','notifications','messages','groups','create',
+                'see more','menu','search','settings','help','privacy','terms','meta','facebook',
+                'trang','trang chu','thuoc phim','cong cu chuyen nghiep','trung tam quang cao',
+                'meta business suite','kham pha','followed pages','followed page','tin nhan',
+                'tao bai viet','quang cao','dashboard'
+            ]);
+            const pages = [];
+            const seen = new Set();
+            const anchors = Array.from(document.querySelectorAll('a[href]'));
+            const normalizeText = (value) => String(value || '')
+                .normalize('NFD')
+                .replace(/[\\u0300-\\u036f]/g, '')
+                .replace(/đ/g, 'd')
+                .replace(/Đ/g, 'D')
+                .replace(/\\s+/g, ' ')
+                .trim()
+                .toLowerCase();
+
+            const cleanName = (value) => {
+                let text = String(value || '').replace(/\\s+/g, ' ').trim();
+                const prefixes = ['switch to ', 'go to ', 'open ', 'anh dai dien cua ', 'profile picture of '];
+                for (const prefix of prefixes) {
+                    if (normalizeText(text).startsWith(prefix)) {
+                        text = text.slice(prefix.length).trim();
+                        break;
+                    }
+                }
+                return text;
+            };
+
+            for (const a of anchors) {
+                const href = a.href || '';
+                let parsed;
+                try { parsed = new URL(href); } catch (_) { continue; }
+                if (!/(^|\\.)facebook\\.com$/i.test(parsed.hostname)) continue;
+
+                let name = cleanName(a.innerText || a.textContent || a.getAttribute('aria-label') || a.title);
+                const normalizedName = normalizeText(name);
+                if (!name || name.length < 2 || name.length > 120 || badTextTokens.has(normalizedName)) continue;
+                if (normalizedName.includes('facebook') && normalizedName.length < 20) continue;
+                if (/^\\d+$/.test(name) || !/[\\p{L}\\p{N}]/u.test(name)) continue;
+
+                const path = parsed.pathname.replace(/\\/$/, '');
+                const parts = path.split('/').filter(Boolean);
+                if (!parts.length) continue;
+                if (reserved.has(parts[0].toLowerCase())) continue;
+                if (['groups','events','watch','reel','reels','stories','plugins','sharer'].includes(parts[0].toLowerCase())) continue;
+                if (parsed.searchParams.has('sk') || parsed.searchParams.has('story_fbid') || parsed.searchParams.has('comment_id')) continue;
+
+                let url = '';
+                if (parts[0].toLowerCase() === 'profile.php') {
+                    const id = parsed.searchParams.get('id');
+                    if (!id) continue;
+                    url = 'https://www.facebook.com/profile.php?id=' + encodeURIComponent(id);
+                } else if (parts.length === 1) {
+                    url = 'https://www.facebook.com/' + parts[0];
+                } else {
+                    continue;
+                }
+
+                if (seen.has(url)) continue;
+                seen.add(url);
+                pages.push({ name, url });
+            }
+
+            return pages;
+        })()`;
+    }
+
+    async connectChromePage(port, preferredUrlPattern = null) {
+        const targets = await CDP.List({ port });
+        const pages = targets.filter(target => target.type === 'page');
+        const target = pages.find(item => preferredUrlPattern && preferredUrlPattern.test(item.url || ''))
+            || pages.find(item => item.url && !item.url.startsWith('chrome://'))
+            || pages[0];
+        if (!target) throw new Error('No Chrome page target found');
+        return CDP({ port, target });
+    }
+
+    async minimizeChromeWindow(client) {
+        try {
+            const { Browser } = client;
+            if (!Browser) return;
+            const { windowId } = await Browser.getWindowForTarget();
+            if (windowId) {
+                await Browser.setWindowBounds({ windowId, bounds: { windowState: 'minimized' } });
+            }
+        } catch (_) {
+            // Headless Chrome has no visible window.
         }
     }
 
@@ -416,7 +524,7 @@ class AutoLiveService extends EventEmitter {
         }).catch(() => {});
     }
 
-    async ensureChrome(settings, port, startUrl = null) {
+    async ensureChrome(settings, port, startUrl = null, options = {}) {
         try {
             await this.fetchJson(`http://127.0.0.1:${port}/json/version`);
             return;
@@ -434,9 +542,16 @@ class AutoLiveService extends EventEmitter {
             `--user-data-dir=${settings.chromeUserDataDir}`,
             `--profile-directory=${settings.chromeProfile || 'Default'}`,
             '--no-first-run',
-            '--no-default-browser-check',
-            startUrl || settings.facebookLiveUrl || 'https://www.facebook.com/live/producer'
+            '--no-default-browser-check'
         ];
+
+        if (options.visible === false) {
+            args.push('--headless=new', '--disable-gpu', '--window-size=1365,900');
+        } else {
+            args.push('--start-maximized');
+        }
+
+        args.push(startUrl || settings.facebookLiveUrl || 'https://www.facebook.com/live/producer');
 
         spawn(chromePath, args, { detached: true, stdio: 'ignore' }).unref();
         const deadline = Date.now() + 30000;
