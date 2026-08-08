@@ -13,6 +13,7 @@ class AutoLiveService extends EventEmitter {
         this.streamManager = streamManager;
         this.database = database;
         this.jobs = new Map();
+        this.executedAutoRows = new Set();
         this.pollTimer = null;
         this.settingsKey = 'autoLive';
     }
@@ -29,7 +30,8 @@ class AutoLiveService extends EventEmitter {
         return {
             enabled: false,
             googleScheduleUrl: '',
-            pollMinutes: 10,
+            pollMinutes: 1,
+            catchUpMinutes: 5,
             chromePath: this.findChromePath(),
             chromeUserDataDir: appChromeUserDataDir,
             chromeProfile: 'Default',
@@ -61,16 +63,22 @@ class AutoLiveService extends EventEmitter {
         if (!settings.enabled || !settings.googleScheduleUrl) return [];
 
         const rows = await this.fetchGoogleSchedule(settings.googleScheduleUrl);
-        const upcoming = rows.filter(row => row.scheduledAt && row.scheduledAt > new Date());
+        const now = new Date();
+        const catchUpWindow = new Date(now.getTime() - (Number(settings.catchUpMinutes) || 5) * 60 * 1000);
+        const upcoming = rows.filter(row => row.scheduledAt && row.scheduledAt > now);
+        const missed = rows.filter(row => row.scheduledAt && row.scheduledAt <= now && row.scheduledAt >= catchUpWindow && !this.executedAutoRows.has(row.id));
 
         for (const row of upcoming) {
-            const job = schedule.scheduleJob(row.scheduledAt, () => this.executeRow(row).catch(error => {
-                this.emit('autoLive:error', { row, error: error.message });
-            }));
+            const job = schedule.scheduleJob(row.scheduledAt, () => this.executeScheduledRow(row));
             this.jobs.set(row.id, job);
         }
 
-        this.emit('autoLive:reloaded', { total: rows.length, scheduled: upcoming.length });
+        for (const row of missed) {
+            const job = setTimeout(() => this.executeScheduledRow(row), 1000);
+            this.jobs.set(row.id, { cancel: () => clearTimeout(job) });
+        }
+
+        this.emit('autoLive:reloaded', { total: rows.length, scheduled: upcoming.length, catchUp: missed.length });
         this.startPolling(settings);
         return upcoming;
     }
@@ -290,6 +298,17 @@ class AutoLiveService extends EventEmitter {
         return streamId;
     }
 
+    async executeScheduledRow(row) {
+        if (this.executedAutoRows.has(row.id)) return null;
+        this.executedAutoRows.add(row.id);
+        try {
+            return await this.executeRow(row);
+        } catch (error) {
+            this.emit('autoLive:error', { row, error: error.message });
+            throw error;
+        }
+    }
+
     async resolveVideoConfig(inputPath) {
         const source = String(inputPath || '').trim();
         if (!source) throw new Error('No videoPath in Google row or Auto Live settings');
@@ -324,7 +343,7 @@ class AutoLiveService extends EventEmitter {
 
         const client = await this.connectChromePage(port, /facebook\.com/i);
         try {
-            const { Page, Runtime } = client;
+            const { Page, Runtime, Input } = client;
             await Page.enable();
             await this.minimizeChromeWindow(client);
 
@@ -353,8 +372,12 @@ class AutoLiveService extends EventEmitter {
                 });
 
                 const value = result.result && result.result.value;
-                if (value && value.rtmpUrl && value.streamKey) {
-                    return { rtmpUrl: value.rtmpUrl.replace(/\/$/, ''), streamKey: value.streamKey };
+                if (value && !value.streamKey) {
+                    await this.prepareFacebookLiveProducer(Runtime, Input);
+                }
+                if (value && value.streamKey) {
+                    const rtmpUrl = value.rtmpUrl || 'rtmps://live-api-s.facebook.com:443/rtmp/';
+                    return { rtmpUrl: rtmpUrl.replace(/\/$/, ''), streamKey: value.streamKey };
                 }
 
                 this.emit('autoLive:status', { status: 'waiting-for-key', row, pageTitle: value?.title });
@@ -377,19 +400,141 @@ class AutoLiveService extends EventEmitter {
 
     normalizeFacebookLiveUrl(inputUrl, settings = {}) {
         const raw = String(inputUrl || '').trim();
-        if (!raw) return '';
+        if (!raw) return 'https://www.facebook.com/live/producer';
 
         const profileMatch = raw.match(/profile\.php\?id=([^&/]+)/);
-        if (profileMatch) return `https://www.facebook.com/${profileMatch[1]}/live/producer`;
+        if (profileMatch) return 'https://www.facebook.com/live/producer';
 
         let parsed;
         try { parsed = new URL(raw); } catch (_) { return raw; }
         if (!/(^|\.)facebook\.com$/i.test(parsed.hostname)) return raw;
         if (/\/live\/producer\/?$/i.test(parsed.pathname)) return raw;
+        if (/\/live\/producer\/v2\/?/i.test(parsed.pathname)) return raw;
 
         const path = parsed.pathname.replace(/\/$/, '');
-        if (!path || path === '/') return this.buildPageLiveUrl(settings) || raw;
-        return `https://www.facebook.com${path}/live/producer`;
+        if (!path || path === '/') return 'https://www.facebook.com/live/producer';
+        return 'https://www.facebook.com/live/producer';
+    }
+
+    async prepareFacebookLiveProducer(Runtime, Input) {
+        const snapshot = await this.getFacebookLiveProducerSnapshot(Runtime);
+        const text = snapshot.text || '';
+
+        if (/thiet lap video truc tiep|set up live video/.test(text)) {
+            const clicked = await this.clickFacebookText(Runtime, Input, ['thiet lap video truc tiep', 'set up live video']);
+            if (clicked) await this.delay(10000);
+        }
+
+        const afterSetup = await this.getFacebookLiveProducerSnapshot(Runtime);
+        if (!afterSetup.streamKey && /phan mem phat truc tiep|streaming software/.test(afterSetup.text || '')) {
+            const clicked = await this.clickFacebookStreamingSoftware(Runtime, Input)
+                || await this.clickFacebookText(Runtime, Input, ['phan mem phat truc tiep', 'streaming software']);
+            if (clicked) await this.delay(8000);
+        }
+    }
+
+    async getFacebookLiveProducerSnapshot(Runtime) {
+        const result = await Runtime.evaluate({
+            returnByValue: true,
+            expression: `(() => {
+                const normalize = value => String(value || '')
+                    .normalize('NFD')
+                    .replace(/[\\u0300-\\u036f]/g, '')
+                    .replace(/đ/g, 'd')
+                    .replace(/Đ/g, 'D')
+                    .replace(/\\s+/g, ' ')
+                    .trim()
+                    .toLowerCase();
+                const text = document.body ? document.body.innerText : '';
+                const values = Array.from(document.querySelectorAll('input, textarea'))
+                    .map(el => el.value || el.getAttribute('value') || el.innerText || '')
+                    .filter(Boolean);
+                const all = [text, ...values].join('\\n');
+                const rtmp = all.match(/rtmps?:\\/\\/[^\\s"'<>]+/i);
+                const key = all.match(/FB-[A-Za-z0-9_\\-]+/);
+                return { text: normalize(all), rtmpUrl: rtmp && rtmp[0], streamKey: key && key[0] };
+            })()`
+        });
+        return (result.result && result.result.value) || {};
+    }
+
+    async clickFacebookStreamingSoftware(Runtime, Input) {
+        const result = await Runtime.evaluate({
+            returnByValue: true,
+            expression: `(() => {
+                const normalize = value => String(value || '')
+                    .normalize('NFD')
+                    .replace(/[\\u0300-\\u036f]/g, '')
+                    .replace(/đ/g, 'd')
+                    .replace(/Đ/g, 'D')
+                    .replace(/\\s+/g, ' ')
+                    .trim()
+                    .toLowerCase();
+                const elements = Array.from(document.querySelectorAll('div, section, main'));
+                const source = elements
+                    .map(el => ({ el, text: normalize(el.innerText || el.textContent || ''), rect: el.getBoundingClientRect() }))
+                    .filter(item => item.text.includes('chon nguon video') && item.text.includes('webcam') && item.text.includes('phan mem phat truc tiep') && item.rect.width > 250 && item.rect.height > 80)
+                    .sort((a, b) => (a.rect.width * a.rect.height) - (b.rect.width * b.rect.height))[0];
+                if (!source) return null;
+                return {
+                    x: source.rect.left + source.rect.width * 0.62,
+                    y: source.rect.top + Math.min(120, source.rect.height * 0.58)
+                };
+            })()`
+        });
+        const point = result.result && result.result.value;
+        if (!point) return false;
+        await Input.dispatchMouseEvent({ type: 'mouseMoved', x: point.x, y: point.y });
+        await Input.dispatchMouseEvent({ type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+        await Input.dispatchMouseEvent({ type: 'mouseReleased', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+        return true;
+    }
+
+    async clickFacebookText(Runtime, Input, needles) {
+        const expression = `(() => {
+            const needles = ${JSON.stringify(needles)};
+            const normalize = value => String(value || '')
+                .normalize('NFD')
+                .replace(/[\\u0300-\\u036f]/g, '')
+                .replace(/đ/g, 'd')
+                .replace(/Đ/g, 'D')
+                .replace(/\\s+/g, ' ')
+                .trim()
+                .toLowerCase();
+            const isVisible = rect => rect && rect.width > 0 && rect.height > 0;
+            const candidates = [];
+            const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+            while (walker.nextNode()) {
+                const node = walker.currentNode;
+                const text = normalize(node.nodeValue);
+                if (!text || !needles.some(needle => text.includes(needle))) continue;
+                let element = node.parentElement;
+                for (let depth = 0; element && depth < 5; depth++, element = element.parentElement) {
+                    const rect = element.getBoundingClientRect();
+                    if (!isVisible(rect)) continue;
+                    candidates.push({
+                        x: rect.left + rect.width / 2,
+                        y: rect.top + rect.height / 2,
+                        area: rect.width * rect.height,
+                        text: normalize(element.innerText || element.textContent || '')
+                    });
+                }
+            }
+            candidates.sort((a, b) => a.area - b.area);
+            return candidates[0] || null;
+        })()`;
+
+        const result = await Runtime.evaluate({ returnByValue: true, expression });
+        const point = result.result && result.result.value;
+        if (!point) return false;
+        await Runtime.evaluate({ expression: `window.scrollBy(0, ${Math.max(0, point.y - 360)})` }).catch(() => {});
+        await this.delay(300);
+        const adjusted = await Runtime.evaluate({ returnByValue: true, expression });
+        const finalPoint = (adjusted.result && adjusted.result.value) || point;
+        await Input.dispatchMouseEvent({ type: 'mouseMoved', x: finalPoint.x, y: finalPoint.y });
+        await Input.dispatchMouseEvent({ type: 'mousePressed', x: finalPoint.x, y: finalPoint.y, button: 'left', clickCount: 1 });
+        await Input.dispatchMouseEvent({ type: 'mouseReleased', x: finalPoint.x, y: finalPoint.y, button: 'left', clickCount: 1 });
+        return true;
     }
 
     getAppChromeUserDataDir() {
