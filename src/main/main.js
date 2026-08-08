@@ -633,11 +633,12 @@ ipcMain.handle('autoLive:selectFacebookPage', async (event, page) => {
     if (!autoLiveService) await initializeServices();
     const current = await autoLiveService.getSettings();
     const cleanUrl = String(page.url || '').replace(/\/$/, '');
+    const facebookLiveUrl = autoLiveService.buildPageLiveUrl({ selectedFacebookPageUrl: cleanUrl }) || current.facebookLiveUrl;
     const settings = await autoLiveService.saveSettings({
       ...current,
       selectedFacebookPageName: page.name,
       selectedFacebookPageUrl: cleanUrl,
-      facebookLiveUrl: cleanUrl ? `${cleanUrl}/live/producer` : current.facebookLiveUrl
+      facebookLiveUrl
     });
     return { success: true, settings };
   } catch (error) {

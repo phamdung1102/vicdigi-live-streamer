@@ -538,6 +538,105 @@
     gap: 1rem;
 }
 
+.auto-live-schedule-panel {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+.auto-live-schedule-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.auto-live-schedule-header h2 {
+    font-size: 1.125rem;
+    margin-bottom: 0.25rem;
+}
+
+.auto-live-schedule-header p {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.auto-live-schedule-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.auto-live-schedule-list {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.auto-live-row {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) minmax(280px, 1.3fr) auto;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.875rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-tertiary);
+}
+
+.auto-live-row-main,
+.auto-live-row-meta {
+    display: grid;
+    gap: 0.25rem;
+    min-width: 0;
+}
+
+.auto-live-row-main strong,
+.auto-live-row-main span,
+.auto-live-row-meta span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.auto-live-row-main span,
+.auto-live-row-meta {
+    color: var(--text-secondary);
+    font-size: 0.8125rem;
+}
+
+.auto-live-row-status {
+    padding: 0.25rem 0.625rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    background: var(--bg-hover);
+    color: var(--text-secondary);
+}
+
+.auto-live-row-status.active {
+    background: rgba(76, 175, 80, 0.16);
+    color: #4caf50;
+}
+
+.auto-live-row-status.inactive {
+    background: rgba(158, 158, 158, 0.16);
+    color: var(--text-tertiary);
+}
+
+@media (max-width: 900px) {
+    .auto-live-schedule-header,
+    .auto-live-row {
+        grid-template-columns: 1fr;
+    }
+
+    .auto-live-schedule-header {
+        display: grid;
+    }
+}
+
 .schedule-item {
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);

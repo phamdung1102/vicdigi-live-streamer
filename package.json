@@ -1,6 +1,6 @@
 {
   "name": "vicdigi-live-streamer",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Tool live stream đa luồng Facebook, YouTube, TikTok",
   "main": "src/main/main.js",
   "scripts": {

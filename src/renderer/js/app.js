@@ -4,6 +4,7 @@ class App {
         this.currentPage = 'dashboard';
         this.activeStreams = new Map();
         this.schedules = [];
+        this.autoLiveRows = [];
         this.playlistVideos = [];
         this.init();
     }
@@ -231,6 +232,16 @@ class App {
         const syncAutoLiveBtn = document.getElementById('sync-auto-live-sheet');
         if (syncAutoLiveBtn) {
             syncAutoLiveBtn.addEventListener('click', () => this.syncAutoLiveSheet());
+        }
+
+        const schedulePreviewAutoLiveBtn = document.getElementById('schedule-preview-auto-live-sheet');
+        if (schedulePreviewAutoLiveBtn) {
+            schedulePreviewAutoLiveBtn.addEventListener('click', () => this.previewAutoLiveSheet());
+        }
+
+        const scheduleSyncAutoLiveBtn = document.getElementById('schedule-sync-auto-live-sheet');
+        if (scheduleSyncAutoLiveBtn) {
+            scheduleSyncAutoLiveBtn.addEventListener('click', () => this.syncAutoLiveSheet());
         }
 
         const openAutoLiveChromeBtn = document.getElementById('open-auto-live-chrome');
@@ -511,8 +522,9 @@ class App {
 
     updateDashboard() {
         // Update stats
+        const autoLiveUpcoming = this.autoLiveRows.filter(row => row.scheduledAt && new Date(row.scheduledAt).getTime() > Date.now()).length;
         document.getElementById('active-streams').textContent = this.activeStreams.size;
-        document.getElementById('scheduled-streams').textContent = this.schedules.length;
+        document.getElementById('scheduled-streams').textContent = this.schedules.length + autoLiveUpcoming;
         document.getElementById('playlist-count').textContent = this.playlistVideos.length;
         
         // Update active streams list
@@ -1095,6 +1107,7 @@ class App {
         if (typeof scheduleManager !== 'undefined' && scheduleManager.loadSchedules) {
             scheduleManager.loadSchedules();
         }
+        this.loadAutoLiveSchedulePanel();
     }
 
     async loadSettings() {
@@ -1160,6 +1173,7 @@ class App {
         set('auto-live-quality', s.defaultQuality);
         set('auto-live-bitrate', s.defaultBitrate);
         set('auto-live-poll', s.pollMinutes);
+        this.populateFacebookPageSelect(s.scannedFacebookPages || [], s.selectedFacebookPageUrl);
         this.updateSelectedFacebookPageLabel(s.selectedFacebookPageName, s.selectedFacebookPageUrl);
         this.setAutoLiveStatus('Auto Live settings loaded');
     }
@@ -1210,6 +1224,9 @@ class App {
         }
 
         const rows = result.rows || [];
+        this.autoLiveRows = rows;
+        this.renderAutoLiveScheduleList(rows, { mode: 'preview' });
+        this.updateDashboard();
         this.setAutoLiveStatus(`Đọc được ${rows.length} dòng hợp lệ. Dòng kế tiếp: ${rows[0]?.title || 'không có'}`);
     }
 
@@ -1224,8 +1241,76 @@ class App {
         }
 
         const count = (result.upcoming || []).length;
+        this.autoLiveRows = result.upcoming || [];
+        this.renderAutoLiveScheduleList(this.autoLiveRows, { mode: 'sync' });
+        this.updateDashboard();
         this.showToast(`Đã đồng bộ ${count} lịch sắp chạy`, 'success');
         this.setAutoLiveStatus(`Đã hẹn ${count} lịch sắp chạy từ Google Sheet.`);
+    }
+
+    async loadAutoLiveSchedulePanel() {
+        if (!window.api.autoLive) return;
+        const settingsResult = await window.api.autoLive.getSettings();
+        const settings = settingsResult.settings || {};
+        if (!settings.googleScheduleUrl) {
+            this.renderAutoLiveScheduleList([], { mode: 'empty', message: 'Chưa cấu hình link Google Sheet trong Cài đặt.' });
+            return;
+        }
+
+        const result = await window.api.autoLive.previewGoogle(settings.googleScheduleUrl);
+        if (!result.success) {
+            this.renderAutoLiveScheduleList([], { mode: 'error', message: result.error || 'Không đọc được Google Sheet.' });
+            return;
+        }
+
+        this.autoLiveRows = result.rows || [];
+        this.renderAutoLiveScheduleList(this.autoLiveRows, { mode: 'preview' });
+        this.updateDashboard();
+    }
+
+    renderAutoLiveScheduleList(rows, options = {}) {
+        const list = document.getElementById('auto-live-schedule-list');
+        const summary = document.getElementById('auto-live-schedule-summary');
+        if (!list) return;
+
+        const now = Date.now();
+        const upcoming = rows.filter(row => row.scheduledAt && new Date(row.scheduledAt).getTime() > now);
+        if (summary) {
+            if (options.mode === 'error' || options.mode === 'empty') summary.textContent = options.message || '';
+            else summary.textContent = `Đọc được ${rows.length} dòng hợp lệ, ${upcoming.length} lịch sắp chạy.`;
+        }
+
+        if (!rows.length) {
+            list.innerHTML = `
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+                    <p>${this.escapeHtml(options.message || 'Chưa có dòng lịch hợp lệ')}</p>
+                </div>
+            `;
+            return;
+        }
+
+        list.innerHTML = rows.map(row => {
+            const scheduledAt = row.scheduledAt ? new Date(row.scheduledAt) : null;
+            const isUpcoming = scheduledAt && scheduledAt.getTime() > now;
+            const timeText = scheduledAt ? scheduledAt.toLocaleString('vi-VN') : 'Chưa có giờ';
+            const pageText = row.facebookPageName || row.facebookLiveUrl || 'Page mặc định';
+            const videoText = row.videoPath || 'Video mặc định';
+            return `
+                <div class="auto-live-row ${isUpcoming ? 'upcoming' : 'past'}">
+                    <div class="auto-live-row-main">
+                        <strong>${this.escapeHtml(row.title || 'Không có tiêu đề')}</strong>
+                        <span>${this.escapeHtml(timeText)}</span>
+                    </div>
+                    <div class="auto-live-row-meta">
+                        <span>${this.escapeHtml(pageText)}</span>
+                        <span>${this.escapeHtml(videoText)}</span>
+                        <span>${row.stopAfterMinutes ? `${row.stopAfterMinutes} phút` : 'Không hẹn tắt'}</span>
+                    </div>
+                    <span class="auto-live-row-status ${isUpcoming ? 'active' : 'inactive'}">${isUpcoming ? 'Sắp chạy' : 'Đã qua'}</span>
+                </div>
+            `;
+        }).join('');
     }
 
     async openAutoLiveChromeLogin() {
@@ -1251,16 +1336,7 @@ class App {
         }
 
         const pages = result.pages || [];
-        const select = document.getElementById('auto-live-facebook-page');
-        if (select) {
-            select.innerHTML = '<option value="">-- Chọn page --</option>';
-            pages.forEach(page => {
-                const option = document.createElement('option');
-                option.value = page.url;
-                option.textContent = page.name;
-                select.appendChild(option);
-            });
-        }
+        this.populateFacebookPageSelect(pages, document.getElementById('auto-live-facebook-page')?.value || '');
 
         this.showToast(`Quét được ${pages.length} page`, pages.length ? 'success' : 'warning');
         this.setAutoLiveStatus(`Quét được ${pages.length} page. Chọn page trong danh sách.`);
@@ -1285,6 +1361,28 @@ class App {
         this.showToast(`Đã chọn page: ${name}`, 'success');
     }
 
+    populateFacebookPageSelect(pages, selectedUrl = '') {
+        const select = document.getElementById('auto-live-facebook-page');
+        if (!select) return;
+
+        const existing = Array.from(select.options)
+            .filter(option => option.value)
+            .map(option => ({ name: option.textContent, url: option.value }));
+        const merged = new Map();
+        [...existing, ...(pages || [])].forEach(page => {
+            if (page?.url) merged.set(page.url, page);
+        });
+
+        select.innerHTML = '<option value="">-- Chọn page mặc định --</option>';
+        for (const page of merged.values()) {
+            const option = document.createElement('option');
+            option.value = page.url;
+            option.textContent = page.name || page.url;
+            option.selected = page.url === selectedUrl;
+            select.appendChild(option);
+        }
+    }
+
     updateSelectedFacebookPageLabel(name, url) {
         const label = document.getElementById('auto-live-selected-page');
         if (label) label.textContent = url ? `Đang chọn: ${name || url}` : '';
@@ -1302,6 +1400,15 @@ class App {
     setAutoLiveStatus(message) {
         const el = document.getElementById('auto-live-status');
         if (el) el.textContent = message || '';
+    }
+
+    escapeHtml(value) {
+        return String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
     }
 
     async loadUpdaterSettings() {

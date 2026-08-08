@@ -37,6 +37,7 @@ class AutoLiveService extends EventEmitter {
             facebookLiveUrl: 'https://www.facebook.com/live/producer',
             selectedFacebookPageName: '',
             selectedFacebookPageUrl: '',
+            scannedFacebookPages: [],
             defaultVideoPath: '',
             defaultQuality: '720p',
             defaultBitrate: 4000,
@@ -227,7 +228,8 @@ class AutoLiveService extends EventEmitter {
             title,
             description: row.description || row.mota || '',
             scheduledAt,
-            facebookLiveUrl: row.facebookliveurl || row.liveurl || row.linklive || row.pageurl || '',
+            facebookLiveUrl: row.facebookliveurl || row.liveurl || row.linklive || row.pageurl || row.facebookpageurl || '',
+            facebookPageName: row.facebookpagename || row.pagename || row.page || '',
             videoPath: row.videopath || row.video || row.file || '',
             quality: row.quality || row.chatluong || '',
             bitrate: Number(row.bitrate || row.bitratekbps || 0) || null,
@@ -268,15 +270,14 @@ class AutoLiveService extends EventEmitter {
         const settings = await this.getSettings();
         this.emit('autoLive:status', { status: 'opening-chrome', row });
         const keyInfo = await this.getFacebookStreamInfo(row, settings);
-        const videoSource = row.videoPath || settings.defaultVideoPath;
-        if (!videoSource) throw new Error('No videoPath in Google row or Auto Live settings');
+        const videoConfig = await this.resolveVideoConfig(row.videoPath || settings.defaultVideoPath);
 
         const config = {
             name: row.title,
             platform: 'facebook',
             rtmpUrl: keyInfo.rtmpUrl,
             streamKey: keyInfo.streamKey,
-            videoSource,
+            ...videoConfig,
             quality: row.quality || settings.defaultQuality,
             bitrate: row.bitrate || settings.defaultBitrate,
             fps: row.fps || settings.defaultFps,
@@ -289,6 +290,34 @@ class AutoLiveService extends EventEmitter {
         return streamId;
     }
 
+    async resolveVideoConfig(inputPath) {
+        const source = String(inputPath || '').trim();
+        if (!source) throw new Error('No videoPath in Google row or Auto Live settings');
+
+        const stat = await fs.promises.stat(source).catch(() => null);
+        if (!stat) throw new Error(`Video path not found: ${source}`);
+
+        if (stat.isDirectory()) {
+            if (!this.streamManager || typeof this.streamManager.scanVideoFolder !== 'function') {
+                throw new Error('Cannot scan video folder without StreamManager');
+            }
+            const videos = await this.streamManager.scanVideoFolder(source);
+            const paths = videos.map(video => video.path).filter(Boolean);
+            if (!paths.length) throw new Error(`No supported video files in folder: ${source}`);
+            return {
+                playlist: {
+                    videos: paths,
+                    mode: 'sequential',
+                    skipErrors: true
+                },
+                videoSource: paths[0]
+            };
+        }
+
+        if (!stat.isFile()) throw new Error(`Video path is not a file or folder: ${source}`);
+        return { videoSource: source };
+    }
+
     async getFacebookStreamInfo(row, settings) {
         const port = Number(settings.chromeDebugPort) || 9223;
         await this.ensureChrome(settings, port, null, { visible: false });
@@ -299,7 +328,10 @@ class AutoLiveService extends EventEmitter {
             await Page.enable();
             await this.minimizeChromeWindow(client);
 
-            const liveUrl = row.facebookLiveUrl || this.buildPageLiveUrl(settings) || settings.facebookLiveUrl;
+            const liveUrl = this.normalizeFacebookLiveUrl(row.facebookLiveUrl, settings)
+                || this.buildPageLiveUrl(settings)
+                || this.normalizeFacebookLiveUrl(settings.facebookLiveUrl, settings)
+                || settings.facebookLiveUrl;
             await Page.navigate({ url: liveUrl });
             await this.delay(3000);
 
@@ -338,9 +370,26 @@ class AutoLiveService extends EventEmitter {
     buildPageLiveUrl(settings) {
         const pageUrl = String(settings.selectedFacebookPageUrl || '').replace(/\/$/, '');
         if (!pageUrl) return '';
-        const profileMatch = pageUrl.match(/profile\.php\?id=([^&]+)/);
+        const profileMatch = pageUrl.match(/profile\.php\?id=([^&/]+)/);
         if (profileMatch) return `https://www.facebook.com/${profileMatch[1]}/live/producer`;
         return `${pageUrl}/live/producer`;
+    }
+
+    normalizeFacebookLiveUrl(inputUrl, settings = {}) {
+        const raw = String(inputUrl || '').trim();
+        if (!raw) return '';
+
+        const profileMatch = raw.match(/profile\.php\?id=([^&/]+)/);
+        if (profileMatch) return `https://www.facebook.com/${profileMatch[1]}/live/producer`;
+
+        let parsed;
+        try { parsed = new URL(raw); } catch (_) { return raw; }
+        if (!/(^|\.)facebook\.com$/i.test(parsed.hostname)) return raw;
+        if (/\/live\/producer\/?$/i.test(parsed.pathname)) return raw;
+
+        const path = parsed.pathname.replace(/\/$/, '');
+        if (!path || path === '/') return this.buildPageLiveUrl(settings) || raw;
+        return `https://www.facebook.com${path}/live/producer`;
     }
 
     getAppChromeUserDataDir() {
@@ -394,7 +443,13 @@ class AutoLiveService extends EventEmitter {
                 }
             }
 
-            return pages.slice(0, 50);
+            const limited = pages.slice(0, 50);
+            const latestSettings = await this.getSettings();
+            await this.database.saveSetting(this.settingsKey, {
+                ...latestSettings,
+                scannedFacebookPages: limited
+            });
+            return limited;
         } finally {
             await client.close();
         }
