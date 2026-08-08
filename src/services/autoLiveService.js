@@ -294,6 +294,7 @@ class AutoLiveService extends EventEmitter {
         };
 
         const streamId = await this.streamManager.startStream(config);
+        await this.finishFacebookGoLive(row, settings);
         this.emit('autoLive:started', { row, streamId });
         return streamId;
     }
@@ -388,6 +389,192 @@ class AutoLiveService extends EventEmitter {
         } finally {
             await client.close();
         }
+    }
+
+    async finishFacebookGoLive(row, settings) {
+        const port = Number(settings.chromeDebugPort) || 9223;
+        const client = await this.connectChromePage(port, /facebook\.com/i);
+        try {
+            const { Runtime, Input } = client;
+            await this.waitForFacebookSourceConnected(Runtime, row);
+            await this.ensureFacebookPostDetails(Runtime, Input, row);
+            await this.clickFacebookGoLive(Runtime, Input, row);
+            await this.waitForFacebookLiveDashboard(Runtime, row);
+        } finally {
+            await client.close();
+        }
+    }
+
+    async waitForFacebookSourceConnected(Runtime, row) {
+        const deadline = Date.now() + 120000;
+        while (Date.now() < deadline) {
+            const snapshot = await this.getFacebookLiveProducerSnapshot(Runtime);
+            const text = snapshot.text || '';
+            if (/dang phat truc tiep|ban dang phat truc tiep/.test(text)) return snapshot;
+            if (/\b1\/3\b|\b2\/3\b|toc do bit|ty le khung hinh|fps|mbps|kbps|1080p|720p/.test(text)) return snapshot;
+            this.emit('autoLive:status', { status: 'waiting-for-facebook-signal', row });
+            await this.delay(3000);
+        }
+        throw new Error('Facebook did not detect the stream source after ffmpeg started');
+    }
+
+    async ensureFacebookPostDetails(Runtime, Input, row) {
+        const title = String(row.title || '').trim();
+        const description = String(row.description || '').trim();
+        const before = await this.getFacebookLiveProducerSnapshot(Runtime);
+        if ((before.text || '').includes(this.normalizeText(title)) && !/video truc tiep cua ban noi ve dieu gi/.test(before.text || '')) {
+            return true;
+        }
+
+        await this.clickFacebookText(Runtime, Input, [
+            'video truc tiep cua ban noi ve dieu gi',
+            'chinh sua chi tiet bai viet',
+            'edit post details',
+            'what is your live video about'
+        ]);
+        await this.delay(1200);
+
+        const titleFilled = await this.fillFacebookField(Runtime, Input, {
+            kind: 'title',
+            value: title,
+            selectorExpression: `(() => {
+                const visible = rect => rect && rect.width > 120 && rect.height > 20;
+                const normalize = value => String(value || '')
+                    .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '')
+                    .replace(/\\u0111/g, 'd').replace(/\\u0110/g, 'D')
+                    .replace(/\\s+/g, ' ').trim().toLowerCase();
+                const items = Array.from(document.querySelectorAll('input[type="text"], input:not([type]), textarea'))
+                    .map(el => ({ el, rect: el.getBoundingClientRect(), label: normalize([el.placeholder, el.getAttribute('aria-label'), el.name].join(' ')) }))
+                    .filter(item => visible(item.rect) && !/khoa luong|stream key|url|rtmp/.test(item.label))
+                    .sort((a, b) => (a.rect.top - b.rect.top) || (b.rect.width - a.rect.width));
+                const item = items[0];
+                if (!item) return null;
+                return { x: item.rect.left + item.rect.width / 2, y: item.rect.top + item.rect.height / 2 };
+            })()`
+        });
+
+        if (!titleFilled && title) {
+            await this.trySetLiveText(Runtime, row);
+        }
+
+        if (description) {
+            await this.fillFacebookField(Runtime, Input, {
+                kind: 'description',
+                value: description,
+                selectorExpression: `(() => {
+                    const visible = rect => rect && rect.width > 120 && rect.height > 40;
+                    const normalize = value => String(value || '')
+                        .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '')
+                        .replace(/\\u0111/g, 'd').replace(/\\u0110/g, 'D')
+                        .replace(/\\s+/g, ' ').trim().toLowerCase();
+                    const items = Array.from(document.querySelectorAll('[contenteditable="true"], textarea'))
+                        .map(el => ({ el, rect: el.getBoundingClientRect(), label: normalize([el.getAttribute('aria-label'), el.getAttribute('aria-placeholder'), el.placeholder].join(' ')) }))
+                        .filter(item => visible(item.rect) && !/tieu de|title|khoa luong|stream key/.test(item.label))
+                        .sort((a, b) => (a.rect.top - b.rect.top) || (b.rect.height - a.rect.height));
+                    const item = items[0];
+                    if (!item) return null;
+                    return { x: item.rect.left + item.rect.width / 2, y: item.rect.top + Math.min(item.rect.height / 2, 70) };
+                })()`
+            });
+        }
+
+        const saved = await this.clickFacebookButton(Runtime, Input, ['luu', 'save'], { preferLowest: false });
+        if (saved) await this.delay(2500);
+        return true;
+    }
+
+    async fillFacebookField(Runtime, Input, options) {
+        if (!options.value) return false;
+        const result = await Runtime.evaluate({ returnByValue: true, expression: options.selectorExpression });
+        const point = result.result && result.result.value;
+        if (!point) return false;
+
+        await Input.dispatchMouseEvent({ type: 'mouseMoved', x: point.x, y: point.y });
+        await Input.dispatchMouseEvent({ type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+        await Input.dispatchMouseEvent({ type: 'mouseReleased', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+        await this.delay(200);
+        await Input.dispatchKeyEvent({ type: 'keyDown', key: 'Control', windowsVirtualKeyCode: 17, nativeVirtualKeyCode: 17, modifiers: 2 });
+        await Input.dispatchKeyEvent({ type: 'keyDown', key: 'a', code: 'KeyA', windowsVirtualKeyCode: 65, nativeVirtualKeyCode: 65, modifiers: 2 });
+        await Input.dispatchKeyEvent({ type: 'keyUp', key: 'a', code: 'KeyA', windowsVirtualKeyCode: 65, nativeVirtualKeyCode: 65, modifiers: 2 });
+        await Input.dispatchKeyEvent({ type: 'keyUp', key: 'Control', windowsVirtualKeyCode: 17, nativeVirtualKeyCode: 17 });
+        await Input.insertText({ text: options.value });
+        await this.delay(300);
+        return true;
+    }
+
+    async clickFacebookGoLive(Runtime, Input, row) {
+        const clicked = await this.clickFacebookButton(Runtime, Input, ['phat truc tiep', 'go live'], { preferLowest: true, minWidth: 100 });
+        if (!clicked) throw new Error('Could not click the final Facebook Go Live button');
+        this.emit('autoLive:status', { status: 'facebook-go-live-clicked', row });
+    }
+
+    async waitForFacebookLiveDashboard(Runtime, row) {
+        const deadline = Date.now() + 60000;
+        while (Date.now() < deadline) {
+            const snapshot = await this.getFacebookLiveProducerSnapshot(Runtime);
+            const text = snapshot.text || '';
+            if (/dang phat truc tiep|ban dang phat truc tiep/.test(text)) return snapshot;
+            this.emit('autoLive:status', { status: 'waiting-for-facebook-live', row });
+            await this.delay(3000);
+        }
+        throw new Error('Facebook Go Live was clicked, but live dashboard was not confirmed');
+    }
+
+    async clickFacebookButton(Runtime, Input, labels, options = {}) {
+        const expression = `(() => {
+            const labels = ${JSON.stringify(labels)};
+            const minWidth = ${Number(options.minWidth || 0)};
+            const preferLowest = ${options.preferLowest ? 'true' : 'false'};
+            const normalize = value => String(value || '')
+                .normalize('NFD')
+                .replace(/[\\u0300-\\u036f]/g, '')
+                .replace(/\\u0111/g, 'd')
+                .replace(/\\u0110/g, 'D')
+                .replace(/\\s+/g, ' ')
+                .trim()
+                .toLowerCase();
+            const isDisabled = el => el.matches('[aria-disabled="true"], [disabled]') || el.getAttribute('tabindex') === '-1';
+            const elements = Array.from(document.querySelectorAll('[role="button"], button, a[role="link"]'));
+            const candidates = elements
+                .map(el => {
+                    const rect = el.getBoundingClientRect();
+                    const text = normalize([el.innerText, el.textContent, el.getAttribute('aria-label')].join(' '));
+                    return { el, rect, text };
+                })
+                .filter(item => item.rect.width >= minWidth && item.rect.height > 15 && item.rect.top >= 0 && item.rect.left >= 0)
+                .filter(item => labels.some(label => item.text === label || item.text.includes(label)))
+                .filter(item => !isDisabled(item.el));
+            candidates.sort((a, b) => {
+                if (preferLowest) return b.rect.top - a.rect.top;
+                return (a.rect.width * a.rect.height) - (b.rect.width * b.rect.height);
+            });
+            const item = candidates[0];
+            if (!item) return null;
+            item.el.scrollIntoView({ block: 'center', inline: 'center' });
+            item.el.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+            item.el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+            item.el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+            item.el.click();
+            return { x: item.rect.left + item.rect.width / 2, y: item.rect.top + item.rect.height / 2 };
+        })()`;
+        const result = await Runtime.evaluate({ returnByValue: true, expression });
+        const point = result.result && result.result.value;
+        if (!point) return false;
+        await Input.dispatchMouseEvent({ type: 'mouseMoved', x: point.x, y: point.y }).catch(() => {});
+        await Input.dispatchMouseEvent({ type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1 }).catch(() => {});
+        await Input.dispatchMouseEvent({ type: 'mouseReleased', x: point.x, y: point.y, button: 'left', clickCount: 1 }).catch(() => {});
+        return true;
+    }
+
+    normalizeText(value) {
+        return String(value || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/\u0111/g, 'd')
+            .replace(/\u0110/g, 'D')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .toLowerCase();
     }
 
     buildPageLiveUrl(settings) {
